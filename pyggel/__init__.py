@@ -10,8 +10,6 @@ import mesh, view, image, camera, math3d, light
 import scene, font, geometry, misc, data
 import particle, event, gui
 
-import ext
-
 def quit():
     """Deinitialize PYGGEL..."""
     view.clear_screen()

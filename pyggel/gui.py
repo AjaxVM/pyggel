@@ -1,5 +1,5 @@
 """
-pyggle.gui
+pyggel.gui
 This library (PYGGEL) is licensed under the LGPL by Matthew Roe and PYGGEL contributors.
 
 The gui module contains classes to create and use a simple Graphical User Interface.
@@ -29,7 +29,7 @@ class Theme(object):
         g = {}
         for a in self.theme["Fonts"]:
             b = self.theme["Fonts"][a]
-            g[a] = (font.RFont(b["fontfile"], b["fontsize"]),
+            g[a] = (font.Font(b["fontfile"], b["fontsize"]),
                     font.MEFont(b["fontfile"], b["fontsize"]))
             for i in b["images"]:
                 g[a][0].add_image(i, self.data(b["images"][i]))
@@ -380,7 +380,7 @@ class App(BaseSceneObject):
 
         self.dispatch = event.Dispatcher()
 
-        self.fonts = {"default":(font.RFont(), font.MEFont())}
+        self.fonts = {"default":(font.Font(), font.MEFont())}
         self.theme = Theme(self)
 
         self.packer = Packer(self, size=view.screen.screen_size_2d)
@@ -403,11 +403,11 @@ class App(BaseSceneObject):
             self.event_handler.all_guis.remove(self)
 
     def get_font(self, name):
-        """Return theme RFont and MEFont bound to name."""
+        """Return theme Font and MEFont bound to name."""
         return self.fonts[name]
 
     def get_regfont(self, name):
-        """Return theme RFont bound to name."""
+        """Return theme Font bound to name."""
         return self.fonts[name][0]
 
     def get_mefont(self, name):
@@ -416,7 +416,7 @@ class App(BaseSceneObject):
 
     def update_fonts(self, fonts):
         """Sets all App/Theme fonts to fonts.
-           fonts must be a dict of {"name":(RFont, MEFont)} obejcts"""
+           fonts must be a dict of {"name":(Font, MEFont)} obejcts"""
         self.fonts = fonts
         for i in self.widgets:
             if i.widget_name in ("Frame", "Window"):
@@ -544,7 +544,7 @@ class Widget(object):
         """Create the widget
            app must be the App/Frame/Window this widget is attached to
            pos must be None (to use app.packer) or the (x,y) pos of the widget
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            image_border must be tdef or the pixel size of the border tiles of the background image (if any)
            special_name must be None or the name used to grab a value different from widget_name from the theme"""
         self.app = app
@@ -742,7 +742,7 @@ class Frame(App, Widget):
            pos must be None (to use app.packer) or the (x,y) pos of the widget
            size must be tdef or the (x,y) size of the frame
            background_image must be tdef or the filename of the image to use as the background
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            image_border must be tdef or the pixel size of the border tiles of teh background image (if any)
            special_name must be None or the name used to grab a value different from widget_name from the theme"""
         Widget.__init__(self, app, pos, font, image_border, special_name)
@@ -894,7 +894,7 @@ class Label(Widget):
            background_image must be tdef or the filename of the image to use as the background
            font_color must be tdef or the (R,G,B,A)(0-1) color of the text
            font_color_inactive must be tdef or the (R,G,B,A)(0-1) color of the text for when the widget is not focused
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            font_underline must be tdef or True/False - whether text is underlined
            font_italic must be tdef or True/False - whether text is italic
            font_bold must be tdef or True/False - whether text is bold
@@ -960,7 +960,7 @@ class Button(Widget):
            background_image must be tdef or the filename of the image to use as the background
            background_image_hover must be tdef or the filename of the image to use as the background when mouse is hovering
            background_image_click must be tdef or the filename of the image to use as the background when the button is clicked
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            font_color must be tdef or the (R,G,B,A)(0-1) color of the text
            font_color_hover must be tdef or the (R,G,B,A)(0-1) color of the text when mouse is hovering
            font_color_click must be tdef or the (R,G,B,A)(0-1) color of the text when the button is clicked
@@ -1067,7 +1067,7 @@ class Checkbox(Widget):
            pos must be None (to use app.packer) or the (x,y) pos of the widget
            background_image must be tdef or the filename of the image to use as the image when state is 0
            check_image must be tdef or the filename of the image to use as the image when state is 1
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            image_border must be tdef or the pixel size of the border tiles of teh background image (if any)
            special_name must be None or the name used to grab a value different from widget_name from the theme"""
         Widget.__init__(self, app, pos, font, image_border, special_name)
@@ -1133,7 +1133,7 @@ class Radio(Frame):
            background_image must be tdef or the filename of the image to use as the background
            option_background_image must be tdef or the filename of the image to use as the background for each option check
            option_check_image must be tdef or the filename of the image to use as the check_image for each option check
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            font_color must be tdef or the (R,G,B,A)(0-1) color of the text
            font_color_inactive must be tdef or the (R,G,B,A)(0-1) color of the text when inactive
            font_underline must be tdef or True/False - whether text is underlined
@@ -1265,7 +1265,7 @@ class Input(Widget):
            width must be tdef or the max pixel width of the text input box
            pos must be None (to use app.packer) or the (x,y) pos of the widget
            background_image must be tdef or the filename of the image to use as the background
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            font_color must be tdef or the (R,G,B,A)(0-1) color of the text
            font_color_inactive must be tdef or the (R,G,B,A)(0-1) color of the text when inactive
            font_underline must be tdef or True/False - whether text is underlined
@@ -1454,7 +1454,7 @@ class MoveBar(Widget):
            pos must be the (x,y) pos of the widget
            width must be tdef or the width of the widget
            background_image must be tdef or the filename of the image to use as the background
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            font_color must be tdef or the (R,G,B,A)(0-1) color of the text
            font_color_inactive must be tdef or the (R,G,B,A)(0-1) color of the text when inactive
            font_underline must be tdef or True/False - whether text is underlined
@@ -1559,7 +1559,7 @@ class Window(MoveBar):
            pos must be the (x,y) pos of the widget
            background_image must be tdef or the filename of the image to use as the background for the frame
            movebar_background_image must be tdef or the filename of the image to use as the background for the movebar
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            font_color must be tdef or the (R,G,B,A)(0-1) color of the text
            font_color_inactive must be tdef or the (R,G,B,A)(0-1) color of the text when inactive
            font_underline must be tdef or True/False - whether text is underlined
@@ -1647,7 +1647,7 @@ class Menu(Button):
            sub_background_image must be tdef or the filename of the image to use as the background for each sub-menu option
            sub_background_image_hover must be tdef or the filename of the image to use as the background when mouse is hovering for each sub-menu option
            sub_background_image_click must be tdef or the filename of the image to use as the background when the button is clicked for each sub-menu option
-           font must be tdef/None or the (RFont, MEFont) fonts to use
+           font must be tdef/None or the (Font, MEFont) fonts to use
            font_color must be tdef or the (R,G,B,A)(0-1) color of the text for the menu button
            font_color_hover must be tdef or the (R,G,B,A)(0-1) color of the text when mouse is hovering for the menu button
            font_color_click must be tdef or the (R,G,B,A)(0-1) color of the text when the button is clicked for the menu button

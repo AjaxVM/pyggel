@@ -71,15 +71,10 @@ def main():
     ani2.do("5", True)
     ani2.pos = (0,0,-10)
 
-    exp = pyggel.mesh.Exploder(obj.copy(), frame_duration=100,
-                               kill_when_finished=False)
-
     my_scene = pyggel.scene.Scene()
-    my_scene.camera = camera
     my_scene.add_3d(ani)
     my_scene.add_3d(ani2)
     my_scene.add_light(my_light)
-    my_scene.add_3d(exp)
 
     clock = pygame.time.Clock()
 
@@ -126,14 +121,11 @@ def main():
             if i in meh.keyboard.hit:
                 ani.do(i, False)
 
-        if exp.dead:
-            exp.reset()
-
         pyggel.view.clear_screen()
 
-##        pyggel.view.set3d()
+        pyggel.view.set3d()
 
-        my_scene.render()#camera)
+        my_scene.render(camera)
 
         pyggel.view.refresh_screen()
 main()

@@ -24,7 +24,7 @@ def main():
 
     scene = pyggel.scene.Scene()
 
-    scene.camera = pyggel.camera.LookAtCamera((0,0,0), distance=20)
+    camera = pyggel.camera.LookAtCamera((0,0,0), distance=20)
 
     light = pyggel.light.Light((0,100,0), (0.5,0.5,0.5,1), (1,1,1,1),
                                (50,50,50,10), (0,0,0), True)
@@ -41,7 +41,9 @@ def main():
     c = pyggel.geometry.Cube(1, pos=(-1, 0, 0), texture="data/ar.png")
 
     d = pyggel.geometry.Quad(1, pos=(1, 0, 0), texture=tex)
+    d.rotation=(90,0,0)
     e = pyggel.geometry.Plane(10, pos=(0, -7.5, 0), texture=tex, tile=10)
+    e.rotation=(90,0,0)
     f = pyggel.geometry.Sphere(1, pos=(3, 0, 0), texture=tex)
 
     mesh = pyggel.mesh.OBJ("data/bird_plane.obj", pos=(5, 0, 0))
@@ -84,34 +86,34 @@ def main():
            return None #close the loop
 
         if K_LEFT in event_handler.keyboard.active: #rotate view!
-            scene.camera.roty -= .5
+            camera.roty -= .5
         if K_RIGHT in event_handler.keyboard.active:
-            scene.camera.roty += .5
+            camera.roty += .5
         if K_UP in event_handler.keyboard.active:
-            scene.camera.rotx -= .5
+            camera.rotx -= .5
         if K_DOWN in event_handler.keyboard.active:
-            scene.camera.rotx += .5
+            camera.rotx += .5
         if K_1 in event_handler.keyboard.active:
-            scene.camera.rotz -= .5
+            camera.rotz -= .5
         if "2" in event_handler.keyboard.active: #just to throw you off ;)
-            scene.camera.rotz += .5
+            camera.rotz += .5
 
         if "=" in event_handler.keyboard.active: #move closer/farther out
-            scene.camera.distance -= .1
+            camera.distance -= .1
         if "-" in event_handler.keyboard.active:
-            scene.camera.distance += .1
+            camera.distance += .1
 
         if "a" in event_handler.keyboard.active: #move the camera!
-            scene.camera.posx -= .1
+            camera.posx -= .1
         if K_d in event_handler.keyboard.active:
-            scene.camera.posx += .1
+            camera.posx += .1
         if K_s in event_handler.keyboard.active:
-            scene.camera.posz -= .1
+            camera.posz -= .1
         if K_w in event_handler.keyboard.active:
-            scene.camera.posz += .1
+            camera.posz += .1
 
         pyggel.view.clear_screen()
-        scene.render()
+        scene.render(camera)
         pyggel.view.refresh_screen()
 
 main()
