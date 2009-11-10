@@ -10,7 +10,6 @@ from include import *
 
 import view, data, misc
 
-import Image as pilImage
 from scene import BaseSceneObject
 
 class Image(BaseSceneObject):
@@ -641,14 +640,16 @@ class Animation3D(Animation):
 def GIFImage(filename, pos=(0,0),
              rotation=(0,0,0), scale=1,
              colorize=(1,1,1,1)):
-    """Load a GIF image into an Animation object.
+    """Load a GIF image into an Animation object if PIL is available, otherwise falls back to a static Image.
        filename must be the name of a gif image one disk
        pos is the 2d position of the image
        rotation is the 3d rotation of the image
        scale is the scale factor for the image
        colorize is the color of the image"""
     view.require_init()
-    image = pilImage.open(filename)
+    if not PIL_AVAILABLE:
+        return Image(filename, pos, rotation, scale, colorize)
+    image = PIL.open(filename)
 
     frames = []
 
@@ -732,14 +733,16 @@ def GIFImage(filename, pos=(0,0),
 def GIFImage3D(filename, pos=(0,0,0),
                rotation=(0,0,0), scale=1,
                colorize=(1,1,1,1)):
-    """Load a GIF image into an Animation3D object.
+    """Load a GIF image into an Animation3D object if PIL is available, otherwise falls back to a static Image3D.
        filename must be the name of a gif image one disk
        pos is the 3d position of the image
        rotation is the 3d rotation of the image
        scale is the scale factor for the image
        colorize is the color of the image"""
     view.require_init()
-    image = pilImage.open(filename)
+    if not PIL_AVAILABLE:
+        return Image3D(filename, pos, rotation, scale, colorize)
+    image = PIL.open(filename)
 
     frames = []
 

@@ -17,7 +17,9 @@ PyOpenGL version 3.0.0 or higher (untested on lower, but may work)
 Pygame version 1.8.1 or higher (lower may work)
 Python version 2.5 (possibly 2.6, but no official support, higher versions to be supported later)
 Numpy version 1.2.1 or higher (untested on lower)
-Python Imaging Library 1.1.6 or higher (untested on lower)
+
+OPTIONAL REQUIREMENTS:
+Python Imaging Library 1.1.6 or higher (untested on lower) (required for animated GIF support)
 
 
 Documentation, Tutorials and examples:
@@ -50,4 +52,5 @@ Matthew Roe: project lead / main programmer / assistant developer of Robocalypto
 Ian Mallet: programmer / tester
 Pymike: tester / lead developer (artist, main programmer, testing) of Robocalypto demo.
 Markus Martin: bug fixes / tester
+Robert Ramsay: testing / programmer / packager & maintainer
 And a whole lot of other people who have helped out with advice, testing and coding!
