@@ -33,7 +33,7 @@ def main():
            always be at pos, any rotation is like turning your head, not like orbitting a planet."""
 
     #So, for our needs I think a LookAtCamera is best
-    scene.camera = pyggel.camera.LookAtCamera((0,0,0), distance=20)
+    camera = pyggel.camera.LookAtCamera((0,0,0), distance=20)
 
 
     """Now we need some light in our scene!
@@ -63,8 +63,8 @@ def main():
     img4.pos = (-3,5,0)
 
     #now the fonts
-    font = pyggel.font.Font(font_char_height3d=1)
-    text1 = font.make_text_image3D("test?", italic=True)
+    font = pyggel.font.Font3D(None, 32) #sorry, no mefonts for 3d, and no embedded images/linewraps either, though newlines still work
+    text1 = font.make_text_image("test?", italic=True)
     text1.pos = (0, 5, 0)
 
     scene.add_3d((img, img4)) #these images don't have perpixel alpha, so they are ok to go in base 3d class
@@ -83,7 +83,7 @@ def main():
 
     d = pyggel.geometry.Quad(1, pos=(1, 0, 0), texture=tex) #this will look exactly like the cubes, because it is facing us...
     e = pyggel.geometry.Plane(10, pos=(0, -7.5, 0), texture=tex, tile=10)
-    f = pyggel.geometry.Sphere(1, pos=(3, 0, 0), texture=tex, show_inside=True)
+    f = pyggel.geometry.Sphere(1, pos=(3, 0, 0), texture=tex)
 
     #Hey, those positions for the elements looks a lot nicer now, eh?
 
@@ -175,31 +175,31 @@ def main():
            lets actually do something!"""
 
         if K_LEFT in event_handler.keyboard.active: #rotate view!
-            scene.camera.roty -= .5
+            camera.roty -= .5
         if K_RIGHT in event_handler.keyboard.active:
-            scene.camera.roty += .5
+            camera.roty += .5
         if K_UP in event_handler.keyboard.active:
-            scene.camera.rotx -= .5
+            camera.rotx -= .5
         if K_DOWN in event_handler.keyboard.active:
-            scene.camera.rotx += .5
+            camera.rotx += .5
         if K_1 in event_handler.keyboard.active:
-            scene.camera.rotz -= .5
+            camera.rotz -= .5
         if "2" in event_handler.keyboard.active: #just to throw you off ;)
-            scene.camera.rotz += .5
+            camera.rotz += .5
 
         if "=" in event_handler.keyboard.active: #move closer/farther out
-            scene.camera.distance -= .1
+            camera.distance -= .1
         if "-" in event_handler.keyboard.active:
-            scene.camera.distance += .1
+            camera.distance += .1
 
         if "a" in event_handler.keyboard.active: #move the camera!
-            scene.camera.posx -= .1
+            camera.posx -= .1
         if K_d in event_handler.keyboard.active:
-            scene.camera.posx += .1
+            camera.posx += .1
         if K_s in event_handler.keyboard.active:
-            scene.camera.posz -= .1
+            camera.posz -= .1
         if K_w in event_handler.keyboard.active:
-            scene.camera.posz += .1
+            camera.posz += .1
 
         if " " in event_handler.keyboard.hit: #swap the skybox so we can see the different ones in action!
             if scene.graph.skybox == skybox:
@@ -218,7 +218,7 @@ def main():
         #then, if there is a pick, let's make the object turn red...
 
         #first, we render the scene, this also returns our object
-        obj = scene.render() #render the scene
+        obj = scene.render(camera) #render the scene
         #Now, since we want to highlight the object the mouse is over, we gotta undo it too
         if last_obj:
             last_obj.colorize = (1,1,1,1)

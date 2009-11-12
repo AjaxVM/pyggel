@@ -17,6 +17,9 @@ def main():
     img.colorize=(1,0,0,1)
     img2 = pyggel.image.Image("data/ar.png", pos=(50,0))
     img2.colorize=(1,1,1,0.5)
+    img2sub = img2.sub_image((0,0), (15, 15))
+    img2sub.colorize=(1, 0, 0, 1)
+    img2sub.pos = (600, 400)
     img3d = []
     for x in xrange(10):
         img3d.append(pyggel.image.Image3D("data/tile_example.png",
@@ -25,10 +28,10 @@ def main():
                                                10)))
 
     font = pyggel.font.MEFont()
-    font3d = pyggel.font.Font(font_char_height3d=0.3)
-    img4 = font.make_text_image("Hello World: 2D", (1, 1, 0, 1), underline=True, italic=True, bold=True)
+    font3d = pyggel.font.Font3D()
+    img4 = font.make_text_image("Hello World: 2D", (1, 1, 0), underline=True, italic=True, bold=True)
     img4.pos = (50,50)
-    img5 = font3d.make_text_image3D("Hello World: 3D", (0, 1, 1, 1))
+    img5 = font3d.make_text_image("Hello World: 3D", (0, 1, 1))
     img5.scale = 2
 
     img6 = pyggel.image.GIFImage("data/smiley.gif", pos=(150, 150))
@@ -38,6 +41,8 @@ def main():
                                     [(0,0,16,16), (16,0,16,16), (32,0,16,16), (16,0,16,16)],
                                     100),
                            True)
+
+    img.blit(img2, (0, 0))
 
     obj = pyggel.mesh.OBJ("data/bird_plane.obj")
     obj.scale = .5
@@ -59,6 +64,7 @@ def main():
     my_scene.pick = True
     my_scene.add_2d(img)
     my_scene.add_2d(img2)
+    my_scene.add_2d(img2sub)
     my_scene.add_2d(img4)
     my_scene.add_2d(img6)
 
@@ -71,7 +77,6 @@ def main():
     my_scene.add_3d(img7)
 
     my_scene.add_light(my_light)
-    my_scene.camera = camera
 
     clock = pygame.time.Clock()
 
@@ -93,7 +98,10 @@ def main():
             return None
         if "left" in meh.mouse.hit:
             if img.get_rect().collidepoint(pyggel.view.screen.get_mouse_pos2d()):
-                print 32
+                if img.to_be_blitted:
+                    img.clear_blits()
+                else:
+                    img.blit(img2, (0,0))
         if "right" in meh.mouse.hit:
             cur = view.screen.cursor
             if cur.running:
@@ -139,9 +147,9 @@ def main():
 
         img5.visible = not img5.visible
 
-        pyggel.view.clear_screen(my_scene)
+        pyggel.view.clear_screen()
 
-        hit = my_scene.render()#camera)
+        hit = my_scene.render(camera)
         if last_hit:
             last_hit.outline = False
         if hit:

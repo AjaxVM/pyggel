@@ -7,7 +7,7 @@ A simple fire effect is included.
 """
 
 from include import *
-import data, image, misc, data, view
+import data, image, misc, data
 from scene import BaseSceneObject
 
 import random
@@ -36,7 +36,7 @@ class Particle3D(object):
         """Update the particle."""
         self.behavior.particle_update(self)
 
-    def render(self, camera=None):
+    def render(self, camera):
         """Render the particle.
            camera must be None or the camera object the scene is using"""
         self.update()
@@ -77,7 +77,7 @@ class Emitter3D(BaseSceneObject):
         """Update the emitter."""
         self.behavior.emitter_update()
 
-    def render(self, camera=None):
+    def render(self, camera):
         """Render and update all particles.
            camera must be None of the camera the scene is using"""
         self.update()
@@ -205,9 +205,17 @@ class ParticlePoint(object):
     def update(self):
         """Update the particle."""
         self.behavior.particle_update(self)
+        x, y, z = self.pos
+        r, g, b, a = self.colorize
 
-        self.parent.array.update_verts(self.index, self.pos)
-        self.parent.array.update_colors(self.index, self.colorize)
+        self.parent.vertex_array.verts[self.index][0] = x
+        self.parent.vertex_array.verts[self.index][1] = y
+        self.parent.vertex_array.verts[self.index][2] = z
+
+        self.parent.vertex_array.colors[self.index][0] = r
+        self.parent.vertex_array.colors[self.index][1] = g
+        self.parent.vertex_array.colors[self.index][2] = b
+        self.parent.vertex_array.colors[self.index][3] = a
 
 class EmitterPoint(BaseSceneObject):
     """A more complex particle emitter, that stores all particles in a vertex array."""
@@ -223,7 +231,7 @@ class EmitterPoint(BaseSceneObject):
         self.empty_spaces = []
         self.last_number = 0
 
-        self.array = data.get_best_array_type(GL_POINTS, self.behavior.max_particles, 5)
+        self.vertex_array = data.VertexArray(GL_POINTS, self.behavior.max_particles)
 
         self.pickable = False
         self.particle_type = ParticlePoint
@@ -263,18 +271,15 @@ class EmitterPoint(BaseSceneObject):
         """Update the emitter."""
         self.behavior.emitter_update()
 
-    def render(self, camera=None):
+    def render(self, camera):
         """Render and update all particles.
            camera must be None of the camera the scene is using"""
         self.update()
         glPointSize(self.behavior.point_size)
-        glDisable(GL_LIGHTING)
         for i in self.particles:
             if i:
                 i.update()
-        self.array.render()
-        if view.screen.lighting:
-            glEnable(GL_LIGHTING)
+        self.vertex_array.render()
 
 
 class BehaviorPoint(object):

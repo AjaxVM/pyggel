@@ -86,9 +86,8 @@ class Mouse(object):
     def do_buttonup(self, event):
         """Remove a button from active list."""
         if event.button in self.active:
+            name = self.get_name(event.button)
             self.active.remove(event.button)
-        name = self.get_name(event.button)
-        if name in self.active:
             self.active.remove(name)
 
 class Dispatcher(object):
@@ -248,6 +247,7 @@ class Handler(object):
         self.gui_keyboard.held = []
         self.mouse.held = []
         self.gui_mouse.held = []
+        self.quit = False
         for event in pygame.event.get():
             self.handle_event(event)
 

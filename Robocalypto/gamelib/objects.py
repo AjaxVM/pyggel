@@ -88,24 +88,24 @@ class Player(GameObject):
             self.frame = 0
         self.rel_timer -= 1
         self.old_pos = list(self.pos)
-        
-        key = pygame.key.get_pressed()
-        if key[K_w]:
+
+        keys = self.game.event_handler.keyboard.held
+        if "w" in keys:
             self.move(self.speed, (0, -self.rotation))
-        if key[K_s]:
+        if "s" in keys:
             self.move(-self.speed, (0, -self.rotation))
-        if key[K_a]:
+        if "a" in keys:
             self.move(-self.speed, (0, -self.rotation-90))
-        if key[K_d]:
+        if "d" in keys:
             self.move(self.speed, (0, -self.rotation-90))
-        if key[K_w] or key[K_s] or key[K_a] or key[K_d]:
+        if "w" in keys or "s" in keys or "a" in keys or "d" in keys:
             self.gun.height = math.sin(math.radians(self.frame)*8)/75 + self.gun.old_y
             self.gun.update_obj()
         else:
             self.gun.height = self.gun.old_y
         
-        mb = pygame.mouse.get_pressed()
-        if mb[0]:
+        mb = self.game.event_handler.mouse.held
+        if "left" in mb:
             if self.rel_timer <= 0:
               
                 #Initial shot position
