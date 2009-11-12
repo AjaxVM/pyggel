@@ -247,6 +247,7 @@ class Handler(object):
         self.gui_keyboard.held = []
         self.mouse.held = []
         self.gui_mouse.held = []
+        self.quit = False
         for event in pygame.event.get():
             self.handle_event(event)
 

@@ -5,15 +5,18 @@ This library (PYGGEL) is licensed under the LGPL by Matthew Roe and PYGGEL contr
 The geometry module contains classes used to render 3d geometric primitives.
 """
 
+import math
+
 from include import *
-import view, data, misc
+import view, data, misc, math3d
 from data import Texture, BlankTexture
 from scene import BaseSceneObject
 
 class Cube(BaseSceneObject):
     """A geometric cube that can be colored and textured"""
     def __init__(self, size, pos=(0,0,0), rotation=(0,0,0),
-                 colorize=(1,1,1,1), texture=None, mirror=True):
+                 colorize=(1,1,1,1), texture=None, mirror=True,
+                 hide_faces=[]):
         """Create a cube
            size is the absolute size of the cube
            pos is the position of the cube
@@ -25,8 +28,12 @@ class Cube(BaseSceneObject):
                if False, the Texture is considered a cube map, like this:
                    blank, blank, top, blank,
                    back, left, front, right,
-                   blank, blank, bottom, blank"""
+                   blank, blank, bottom, blank
+           hide_faces must be a list of the sides of the cube not to add:
+               acceptable values are left, right, top, bottom, back, front"""
         BaseSceneObject.__init__(self)
+
+        self.hide_faces = hide_faces
 
         self.size = size
         self.pos = pos
@@ -48,12 +55,26 @@ class Cube(BaseSceneObject):
                       (1, 1, -1),#bottomrightback
                       (-1, 1, -1))#bottomleftback
 
-        self.sides = ((7,4,0,3, 2, 2, 5),#left
+        sides = ((7,4,0,3, 2, 2, 5),#left
                       (2,1,5,6, 3, 4, 4),#right
                       (7,3,2,6, 5, 0, 3),#top
                       (0,4,5,1, 4, 5, 2),#bottom
                       (3,0,1,2, 0, 1, 0),#front
                       (6,5,4,7, 1, 3, 1))#back
+        self.sides = []
+        if not "left" in hide_faces:
+            self.sides.append(sides[0])
+        if not "right" in hide_faces:
+            self.sides.append(sides[1])
+        if not "top" in hide_faces:
+            self.sides.append(sides[2])
+        if not "bottom" in hide_faces:
+            self.sides.append(sides[3])
+        if not "front" in hide_faces:
+            self.sides.append(sides[4])
+        if not "back" in hide_faces:
+            self.sides.append(sides[5])
+
         self.normals = ((0, 0, 1), #front
                         (0, 0, -1), #back
                         (0, -1, 0), #top
@@ -123,9 +144,11 @@ class Cube(BaseSceneObject):
         glRotatef(c, 0, 0, 1)
         glScalef(.5*self.size,.5*self.size,.5*self.size)
         try:
-            glScalef(*self.scale)
+            if not self.scale==(1,1,1):
+                glScalef(*self.scale)
         except:
-            glScalef(self.scale, self.scale, self.scale)
+            if not self.scale==1:
+                glScalef(self.scale, self.scale, self.scale)
         glColor(*self.colorize)
         self.texture.bind()
         if self.outline:
@@ -135,7 +158,7 @@ class Cube(BaseSceneObject):
 
     def copy(self):
         """Return a copy of the quad - uses the same display list"""
-        n = Cube(self.size, self.pos, self.rotation, self.colorize, self.texture)
+        n = Cube(self.size, self.pos, self.rotation, self.colorize, self.texture, self.mirror, self.hide_faces)
         n.display_list = self.display_list
         n.scale = self.scale
         return n
@@ -148,13 +171,14 @@ class Cube(BaseSceneObject):
 class Quad(Cube, BaseSceneObject):
     """A simple 3d square object."""
     def __init__(self, size, pos=(0,0,0), rotation=(0,0,0),
-                 colorize=(1,1,1,1), texture=None):
+                 colorize=(1,1,1,1), texture=None, hide_faces=[]):
         """Create the Quad
            size is the quad
            pos is the position of the quad
            rotation is the rotation of the quad
            colorize is the color of the quad
-           texture can be None, a string filename of an image to load or a data.Texture object - entire texture is mapped to the face"""
+           texture can be None, a string filename of an image to load or a data.Texture object - entire texture is mapped to the face
+           hide_faces are the same as for Cube, except only front and back are allowed"""
 
         BaseSceneObject.__init__(self)
         self.size = size
@@ -170,6 +194,8 @@ class Quad(Cube, BaseSceneObject):
 
         self.display_list = data.DisplayList()
 
+        self.hide_faces = hide_faces
+
         self._compile()
 
     def _compile(self):
@@ -178,29 +204,30 @@ class Quad(Cube, BaseSceneObject):
 
         glBegin(GL_QUADS)
         glNormal3f(0,1,0)
-        glTexCoord2f(1,0)
-        glVertex3f(-1,0,1)
-        glTexCoord2f(0,0)
-        glVertex3f(1, 0, 1)
-        glTexCoord2f(0,1)
-        glVertex3f(1, 0, -1)
-        glTexCoord2f(1,1)
-        glVertex3f(-1, 0, -1)
-
-        glTexCoord2f(1,1)
-        glVertex3f(-1, 0, -1)
-        glTexCoord2f(0,1)
-        glVertex3f(1, 0, -1)
-        glTexCoord2f(0,0)
-        glVertex3f(1, 0, 1)
-        glTexCoord2f(1,0)
-        glVertex3f(-1,0,1)
+        if not "back" in self.hide_faces:
+            glTexCoord2f(1,1)
+            glVertex3f(-1,1,0)
+            glTexCoord2f(0,1)
+            glVertex3f(1, 1, 0)
+            glTexCoord2f(0,0)
+            glVertex3f(1, -1, 0)
+            glTexCoord2f(1,0)
+            glVertex3f(-1, -1, 0)
+        if not "front" in self.hide_faces:
+            glTexCoord2f(1,0)
+            glVertex3f(-1, -1, 0)
+            glTexCoord2f(0,0)
+            glVertex3f(1, -1, 0)
+            glTexCoord2f(0,1)
+            glVertex3f(1, 1, 0)
+            glTexCoord2f(1,1)
+            glVertex3f(-1, 1, 0)
         glEnd()
         self.display_list.end()
 
     def copy(self):
         """Return a copy of the Quad, sharing the same display list"""
-        n = Quad(self.size, self.pos, self.rotation, self.colorize, self.texture)
+        n = Quad(self.size, self.pos, self.rotation, self.colorize, self.texture, self.hide_faces)
         n.scale = self.scale
         n.display_list = self.display_list
         return n
@@ -213,18 +240,19 @@ class Quad(Cube, BaseSceneObject):
 class Plane(Quad):
     """Like a Quad, except the texture is tiled on the face, which increases performance over a lot of quads tiled"""
     def __init__(self, size, pos=(0,0,0), rotation=(0,0,0),
-                 colorize=(1,1,1,1), texture=None, tile=1):
+                 colorize=(1,1,1,1), texture=None, tile=1, hide_faces=[]):
         """Create the Plane
            size of the plane
            pos is the position of the quad
            rotation is the rotation of the quad
            colorize is the color of the quad
            texture can be None, a string filename of an image to load or a data.Texture object - entire texture is mapped to the face
-           tile is the number of times to tile the texture across the Plane"""
+           tile is the number of times to tile the texture across the Plane
+           hide_faces are the same as for a Quad"""
 
         self.tile = tile
 
-        Quad.__init__(self, size, pos, rotation, colorize, texture)
+        Quad.__init__(self, size, pos, rotation, colorize, texture, hide_faces)
 
     def _compile(self):
         """Compile Plane into a data.DisplayList"""
@@ -236,23 +264,24 @@ class Plane(Quad):
 
         glBegin(GL_QUADS)
         glNormal3f(0,1,0)
-        glTexCoord2f(self.tile,0)
-        glVertex3f(-1,0,1)
-        glTexCoord2f(0,0)
-        glVertex3f(1, 0, 1)
-        glTexCoord2f(0,self.tile)
-        glVertex3f(1, 0, -1)
-        glTexCoord2f(self.tile,self.tile)
-        glVertex3f(-1, 0, -1)
-
-        glTexCoord2f(self.tile,self.tile)
-        glVertex3f(-1, 0, -1)
-        glTexCoord2f(0, self.tile)
-        glVertex3f(1, 0, -1)
-        glTexCoord2f(0,0)
-        glVertex3f(1, 0, 1)
-        glTexCoord2f(self.tile, 0)
-        glVertex3f(-1,0,1)
+        if not "back" in self.hide_faces:
+            glTexCoord2f(self.tile,self.tile)
+            glVertex3f(-1,1,0)
+            glTexCoord2f(0,self.tile)
+            glVertex3f(1, 1, 0)
+            glTexCoord2f(0,0)
+            glVertex3f(1, -1, 0)
+            glTexCoord2f(self.tile,0)
+            glVertex3f(-1, -1, 0)
+        if not "front" in self.hide_faces:
+            glTexCoord2f(self.tile,0)
+            glVertex3f(-1, -1, 0)
+            glTexCoord2f(0,0)
+            glVertex3f(1, -1, 0)
+            glTexCoord2f(0,self.tile)
+            glVertex3f(1, 1, 0)
+            glTexCoord2f(self.tile,self.tile)
+            glVertex3f(-1, 1, 0)
         glEnd()
         self.display_list.end()
 
@@ -269,9 +298,11 @@ class Plane(Quad):
         s = self.size / self.tile if (self.size and self.tile) else self.size
         glScalef(.5*self.size,.5*self.size,.5*self.size)
         try:
-            glScalef(*self.scale)
+            if not self.scale == (1,1,1):
+                glScalef(*self.scale)
         except:
-            glScalef(self.scale, self.scale, self.scale)
+            if not self.scale == 1:
+                glScalef(self.scale, self.scale, self.scale)
         glColor(*self.colorize)
         self.texture.bind()
         self.display_list.render()
@@ -279,7 +310,7 @@ class Plane(Quad):
 
     def copy(self):
         """Return a copy of the Plane - sharing the same display list..."""
-        n = Plane(self.size, self.pos, self.rotation, self.colorize, self.texture, self.tile)
+        n = Plane(self.size, self.pos, self.rotation, self.colorize, self.texture, self.tile, self.hide_faces)
         n.scale = self.scale
         n.display_list = self.display_list
         return n
@@ -322,14 +353,15 @@ class Skybox(Cube):
 class Sphere(BaseSceneObject):
     """A geometric Sphere object that can be colored and textured"""
     def __init__(self, size, pos=(0,0,0), rotation=(0,0,0),
-                 colorize=(1,1,1,1), texture=None, detail=30):
+                 colorize=(1,1,1,1), texture=None, detail=30, show_inside=False):
         """Create the Sphere
            size is the radius of the Sphere
            pos ithe position of the sphere
            rotation is the rotation of the sphere
            colorize is the color of the sphere
            texture can be None, a string filename of an image to load or a data.Texture object that will be mapped to the sphere
-           detail is the level of detail for the Sphere, higher = a more smooth sphere"""
+           detail is the level of detail for the Sphere, higher = a more smooth sphere
+           show_inside indicates whether the inside of the sphere is rendered or not"""
         BaseSceneObject.__init__(self)
 
         self.size = size
@@ -342,6 +374,7 @@ class Sphere(BaseSceneObject):
             self.texture = texture
         self.detail = detail
         self.scale = 1
+        self.show_inside = show_inside
 
         self.display_list = data.DisplayList()
 
@@ -358,9 +391,46 @@ class Sphere(BaseSceneObject):
     def _compile(self):
         """Compile the Sphere into a data.DisplayList"""
         self.display_list.begin()
-        Sphere = gluNewQuadric()
-        gluQuadricTexture(Sphere, GLU_TRUE)
-        gluSphere(Sphere, 1, self.detail, self.detail)
+        verts = []
+        texcs = []
+        norms = []
+
+        space=self.detail
+
+        for b in xrange(0, 180, space):
+            b *= 1.0
+            for a in xrange(0, 360, space):
+                a *= 1.0
+                _v = []
+                _t = []
+                for i in xrange(2):
+                    for j in xrange(2):
+                        s1 = space*i
+                        s2 = space*j
+                        x=math.sin(math3d.safe_div(a+s1, 180)*math.pi) * math.sin(math3d.safe_div(b+s2, 180)*math.pi)
+                        z=math.cos(math3d.safe_div(a+s1, 180)*math.pi) * math.sin(math3d.safe_div(b+s2, 180)*math.pi)
+                        y=math.cos(math3d.safe_div(b+s2, 180)*math.pi)
+                        u=math3d.safe_div(a+s1,360)
+                        v=math3d.safe_div(b+s2,360)
+                        _v.append((x,y,z))
+                        _t.append((u,1-v*2))
+                verts.extend([_v[0], _v[1], _v[3], _v[0], _v[3], _v[2]])
+                texcs.extend([_t[0], _t[1], _t[3], _t[0], _t[3], _t[2]])
+                norms.extend([math3d.calcTriNormal(*verts[-6:-3])]*3)
+                norms.extend([math3d.calcTriNormal(*verts[-3::])]*3)
+                if self.show_inside:
+                    verts.extend(reversed(verts[-6::]))
+                    texcs.extend(reversed(texcs[-6::]))
+                    norms.extend([math3d.calcTriNormal(*verts[-6:-3])]*3)
+                    norms.extend([math3d.calcTriNormal(*verts[-3::])]*3)
+        glBegin(GL_TRIANGLES)
+        for i in xrange(len(verts)):
+            u,v = texcs[i]
+            glTexCoord2f(u,v)
+            glNormal3f(*norms[i])
+            x,y,z = verts[i]
+            glVertex3f(x,y,z)
+        glEnd()
         self.display_list.end()
 
     def render(self, camera=None):
@@ -375,9 +445,11 @@ class Sphere(BaseSceneObject):
         glRotatef(c, 0, 0, 1)
         glScalef(self.size, self.size, self.size)
         try:
-            glScalef(*self.scale)
+            if not self.scale == (1,1,1):
+                glScalef(*self.scale)
         except:
-            glScalef(self.scale, self.scale, self.scale)
+            if not self.scale == 1:
+                glScalef(self.scale, self.scale, self.scale)
         glColor(*self.colorize)
         self.texture.bind()
         if self.outline:

@@ -48,9 +48,11 @@ def level_parse(game, scene):
     mx = width/2.0*5
     my = height/2.0*5
     mwh = max((width, height))
-    quad = pyggel.geometry.Plane(mwh*5,pos=[mx,-2.5,my],texture=pyggel.data.Texture("data/floor.png"),tile=mwh)
+    quad = pyggel.geometry.Plane(mwh*5,pos=[mx,-2.5,my],texture=pyggel.data.Texture("data/floor.png"),tile=mwh,
+                                 rotation=(90,0,0), hide_faces=["front"])
     static.append(quad)
-    quad = pyggel.geometry.Plane(mwh*5,pos=[mx,2.5,my],texture=pyggel.data.Texture("data/ceiling.png"),tile=mwh)
+    quad = pyggel.geometry.Plane(mwh*5,pos=[mx,2.5,my],texture=pyggel.data.Texture("data/ceiling.png"),tile=mwh,
+                                 rotation=(90,0,0), hide_faces=["back"])
     static.append(quad)
     for row in GRID:
         for column in row:
@@ -134,6 +136,8 @@ class Game(object):
         #parse ze level
         static, self.walls._objects = level_parse(self, self.scene)
         self.scene.add_3d(pyggel.misc.StaticObjectGroup(static))
+
+        self.event_handler = pyggel.event.Handler()
         
         #Used for bobbing up and down. No I will not be less vague.
         self.frame = 0
@@ -146,27 +150,15 @@ class Game(object):
         self.camera.posx = self.player.pos[0]
     
     def do_input(self):
-        
-        #Get input
-        for e in pyggel.get_events():
-            
-            #OMGZ! YOU QUIT! You disappoint me... >(
-            if e.type == QUIT:
-                self.running = False
-            
-            if e.type == KEYDOWN:
-                
-                #YOU'RE AT IT AGAIN!! AUGGH!
-                if e.key == K_ESCAPE:
-                    self.running = False
-                
-                #Release the mouse from the window if you press space
-                if e.key == K_SPACE:
-                    self.grabbed ^= 1
-                    pygame.event.set_grab(self.grabbed)
-
-                if e.key == K_RETURN:
-                    pyggel.misc.save_screenshot("test.png")
+        self.event_handler.update()
+        if self.event_handler.quit:
+            self.running = False
+        if K_ESCAPE in self.event_handler.keyboard.hit:
+            self.running = False
+        if " " in self.event_handler.keyboard.hit:
+            self.grabbed ^= 1
+        if K_RETURN in self.event_handler.keyboard.hit:
+            pyggel.misc.save_screenshot("test.png")
 
     def do_update(self):
         

@@ -3,7 +3,7 @@ pyggel.__init__
 This library (PYGGEL) is licensed under the LGPL by Matthew Roe and PYGGEL contributors.
 """
 
-PYGGEL_VERSION = "0.08-alpha4b"
+PYGGEL_VERSION = "0.08-alpha4c"
 from include import *
 
 import mesh, view, image, camera, math3d, light
@@ -17,10 +17,6 @@ def quit():
     pygame.quit()
 
 init = view.init
-
-def get_events():
-    """Return (for now) generated pygame events..."""
-    return pygame.event.get()
 
 def get_version():
     """Return the version string for PYGGEL."""
