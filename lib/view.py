@@ -1,6 +1,6 @@
 
 import numpy
-from .scenegraph import Vec3, Mat4
+from .math3d import Vec3, Mat4
 
 class View(object):
     def __init__(self, fov, displaySize, zNear, zFar):
@@ -24,7 +24,7 @@ class View(object):
         return self._matrix
 
     def _buildMatrix(self):
-        return Mat4.identity()
+        return Mat4.from_identity()
 
     @property
     def fov(self):
@@ -93,7 +93,7 @@ class Camera(object):
         self._matrix = None
 
     def _buildMatrix(self):
-        self._matrix = Mat4.identity()
+        self._matrix = Mat4.from_identity()
 
     @property
     def matrix(self):
@@ -121,7 +121,7 @@ class Camera(object):
 
 class LookFromCamera(Camera):
     def _buildMatrix(self):
-        mat4 = Mat4.identity()
+        mat4 = Mat4.fromIdentity()
         mat4.rotate(self._rotation)
         mat4.translate(self._position * -1)
         self._matrix = mat4
@@ -132,7 +132,7 @@ class LookAtCamera(Camera):
         self._distance = distance
 
     def _buildMatrix(self):
-        mat4 = Mat4.identity()
+        mat4 = Mat4.from_identity()
         mat4.translate(Vec3(0, 0, self._distance))
         mat4.rotate(self._rotation)
         mat4.translate(self._position * -1)
