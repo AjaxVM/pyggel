@@ -10,7 +10,7 @@ import numpy
 import math
 
 from lib.math3d import Vec3
-from lib.scenegraph import Scene, TransformNode
+from lib.scene import Scene, TransformNode
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
 
 class RenderThing(object):
