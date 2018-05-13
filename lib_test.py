@@ -39,14 +39,12 @@ class RenderThing(object):
             void main() {
                 Color = vec4(clamp(Position, 0.0, 1.0), 1.0);
                 gl_Position = vec4(Position, 1.0) * worldLocation;
-                gl_Position = gl_ModelViewProjectionMatrix * gl_Position;
             }""", GL_VERTEX_SHADER)
 
         frag = shaders.compileShader("""
             #version 330
             in vec4 Color;
             void main() {
-                //gl_FragColor = vec4( 0, 1, 0, 1 );
                 gl_FragColor = Color;
             }""", GL_FRAGMENT_SHADER)
 
