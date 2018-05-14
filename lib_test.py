@@ -3,103 +3,49 @@ import pygame
 from pygame.locals import *
 
 from OpenGL.GL import *
-from OpenGL.GL import shaders
+# from OpenGL.GL import shaders
 from OpenGL.GLU import *
-from OpenGL.arrays import vbo
+# from OpenGL.arrays import vbo
 import numpy
 import math
 
-from ctypes import c_void_p, sizeof, c_float
+# from ctypes import c_void_p, sizeof, c_float
 
 from lib.data import Texture
 from lib.math3d import Vec3
+from lib.mesh import Mesh
 from lib.scene import Scene, TransformNode
+from lib.shader import Shader
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
 
 class RenderThing(object):
-    def __init__(self, verts, indices=None, texture=None, texcoords=None):
-        self.verts = numpy.array(verts, 'f')
-        self.vert_stride = 3
-
-        self.vbo = vbo.VBO(self.verts)
-
-        if not indices:
-            indices = [range(verts.shape[0])]
-        self.indices = numpy.array(indices, dtype=numpy.int32)
-        self.indexBuffer = vbo.VBO(self.indices, target=GL_ELEMENT_ARRAY_BUFFER)
-
-        self.texture = texture
-        if texture:
-            self.vert_stride = 5
-
-        self.vbo.create_buffers()
-        self.indexBuffer.create_buffers()
-        self.buildShader()
-
-    def buildShader(self):
-        vert = shaders.compileShader("""
-            #version 330
-            layout (location = 0) in vec3 Position;
-            layout (location = 1) in vec2 TexCoord;
-            uniform mat4 worldLocation;
-            out vec4 Color;
-            out vec2 TexCoord0;
-
-            void main() {
-                Color = vec4(clamp(Position, 0.0, 1.0), 1.0);
-                gl_Position = vec4(Position, 1.0) * worldLocation;
-                TexCoord0 = TexCoord;
-            }""", GL_VERTEX_SHADER)
-
-        frag = shaders.compileShader("""
-            #version 330
-            in vec4 Color;
-            in vec2 TexCoord0;
-            uniform sampler2D gSampler;
-
-            void main() {
-                // gl_FragColor = Color;
-                gl_FragColor = texture2D(gSampler, TexCoord0.st) * Color;
-            }""", GL_FRAGMENT_SHADER)
-
-        self.shader = shaders.compileProgram(vert,frag)
-        self.shaderU = {
-            'worldLocation': glGetUniformLocation(self.shader, 'worldLocation'),
-            'gSampler': glGetUniformLocation(self.shader, 'gSampler')
-        }
+    def __init__(self, mesh, shader):
+        self.mesh = mesh
+        self.shader = shader
 
     def render(self, node):
+        self.shader.bind()
+        self.shader.uniform('worldLocation', 1, False, node.render_matrix.representation)
+        self.shader.uniform('gSampler', 0)
 
-        shaders.glUseProgram(self.shader)
-        glUniformMatrix4fv(self.shaderU['worldLocation'], 1, False, node.render_matrix.representation)
-        glUniform1i(self.shaderU['gSampler'], 0)
+        self.mesh.render()
 
-        self.indexBuffer.bind()
-        self.vbo.bind()
-        glEnableVertexAttribArray(0)
-        if self.texture:
-            glEnableVertexAttribArray(1)
-        # verts have 3 points and are first index
-        glVertexAttribPointer(0, 3, GL_FLOAT, False, sizeof(c_float)*self.vert_stride, None)
-        # tex coords have 2 points and are second index - pointer to offset the first 3 float values
-        if self.texture:
-            glVertexAttribPointer(1, 2, GL_FLOAT, False, sizeof(c_float)*self.vert_stride, c_void_p(sizeof(c_float)*3))
-            self.texture.bind()
-        glDrawElements(GL_TRIANGLES, self.indices.shape[0], GL_UNSIGNED_INT, None)
-        glDisableVertexAttribArray(0)
-        if self.texture:
-            glDisableVertexAttribArray(1)
-        self.vbo.unbind()
-        self.indexBuffer.unbind()
-        shaders.glUseProgram(0)
+        self.shader.unbind()
 
 def makeThing():
 
     verts = [
-        -1, -1, 0.5, 0, 0,
-        0, -1, -1, 0.5, 0.5,
-        1, -1, 0.5, 1, 0.5,
-        0, 1, 0, 0.5, 1
+        [-1, -1, 0.5],
+        [0, -1, -1],
+        [1, -1, 0.5],
+        [0, 1, 0],
+    ]
+
+    texcs = [
+        [0, 0],
+        [0.5, 0.5],
+        [1, 0.5],
+        [0.5, 1]
     ]
 
     indices = [
@@ -111,7 +57,39 @@ def makeThing():
 
     texture = Texture.from_file('data/wood-blocks.jpg')
 
-    return RenderThing(verts, indices, texture)
+    mesh = Mesh(verts, texcoords=texcs, texture=texture, indices=indices)
+
+    vs = """
+        #version 330
+        layout (location = 0) in vec3 Position;
+        layout (location = 1) in vec2 TexCoord;
+        uniform mat4 worldLocation;
+        out vec4 Color;
+        out vec2 TexCoord0;
+
+        void main() {
+            Color = vec4(clamp(Position, 0.0, 1.0), 1.0);
+            gl_Position = vec4(Position, 1.0) * worldLocation;
+            TexCoord0 = TexCoord;
+        }"""
+    fs = """
+        #version 330
+        in vec4 Color;
+        in vec2 TexCoord0;
+        uniform sampler2D gSampler;
+
+        void main() {
+            // gl_FragColor = Color;
+            gl_FragColor = texture2D(gSampler, TexCoord0.st) * Color;
+        }"""
+
+    shader = Shader(vs, fs, {
+        'worldLocation': glUniformMatrix4fv,
+        'gSampler': glUniform1i
+    })
+    shader.compile()
+
+    return RenderThing(mesh, shader)
 
 def initDisplay(screen_size):
     pygame.display.set_mode(screen_size, OPENGL|DOUBLEBUF)
