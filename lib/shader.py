@@ -31,6 +31,8 @@ class Shader(object):
         shaders.glUseProgram(self._shader)
 
     def unbind(self):
+        #note: this should not be done unless needed
+        # took fps from ~1000 to ~900 when rendering two objects and binding/unbinding each render
         shaders.glUseProgram(0)
 
     def uniform(self, name, *args):

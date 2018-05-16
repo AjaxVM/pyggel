@@ -1,11 +1,8 @@
 
 import numpy
-import operator
+# import operator
 
 class Vec3(object):
-    def cast(thing):
-        return thing if isinstance(thing, Vec3) else Vec3(thing)
-
     def __init__(self, *args):
         if len(args) == 0:
             self.x = self.y = self.z = 0
@@ -24,22 +21,49 @@ class Vec3(object):
         else:
             raise TypeError('Invalid arguments for Vec3')
 
-    def __combine(self, other, op):
-        f = getattr(operator, op)
-        other = Vec3.cast(other)
-        return Vec3(f(self.x, other.x), f(self.y, other.y), f(self.z, other.z))
-
     def __add__(self, other):
-        return self.__combine(other, 'add')
+        other = Vec3.cast(other)
+        return Vec3(self.x + other.x, self.y+other.y, self.z+other.z)
+
+    def __iadd__(self, other):
+        other = Vec3.cast(other)
+        self.x += other.x
+        self.y += other.y
+        self.z += other.z
+        return self
 
     def __sub__(self, other):
-        return self.__combine(other, 'sub')
+        other = Vec3.cast(other)
+        return Vec3(self.x - other.x, self.y - other.y, self.z - other.z)
+
+    def __isub__(self, other):
+        other = Vec3.cast(other)
+        self.x -= other.x
+        self.y -= other.y
+        self.z -= other.z
+        return self
 
     def __mul__(self, other):
-        return self.__combine(other, 'mul')
+        other = Vec3.cast(other)
+        return Vec3(self.x * other.x, self.y * other.y, self.z * other.z)
+
+    def __imul__(self, other):
+        other = Vec3.cast(other)
+        self.x *= other.x
+        self.y *= other.y
+        self.z *= other.z
+        return self
 
     def __truediv__(self, other):
-        return self.__combine(other, 'truediv')
+        other = Vec3.cast(other)
+        return Vec3(self.x / other.x, self.y / other.y, self.z / other.z)
+
+    def __itruediv__(self, other):
+        other = Vec.cast(other)
+        self.x /= other.x
+        self.y /= other.y
+        self.z /= other.z
+        return self
 
     def __eq__(self, other):
         other = Vec3.cast(other)
@@ -51,6 +75,10 @@ class Vec3(object):
 
     def __str__(self):
         return "Vec3 (x%d, y%d, z%d)"%(self.x, self.y, self.z)
+
+    @staticmethod
+    def cast(thing):
+        return thing if isinstance(thing, Vec3) else Vec3(thing)
 
 # todo this needs to be more fleshed out
 # and should probably be like a subclass of numpy.array or something

@@ -4,6 +4,10 @@ from .math3d import Vec3, Mat4
 # TODO: consider making dirty.py which wraps around things
 # and then tracks when they change
 
+# Because, we need to know if a node is dirty so we kno wwhether to rebuild it's matrices
+# ie if the scene view/camera changed then we must update all render matrices
+# and if the node moved we must update local matrix (and child local matrices)
+
 class Node(object):
     def __init__(self, parent=None):
         self._parent = None
@@ -130,6 +134,8 @@ class TransformNode(Node):
         self.position = position or Vec3(0)
         self.rotation = rotation or Vec3(0)
         self.scale = scale or Vec3(1)
+
+        # todo: cache our local matrix
 
     def get_local_matrix(self):
         return Mat4.from_transform(self.position, self.rotation, self.scale)

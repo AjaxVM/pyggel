@@ -23,18 +23,22 @@ class RenderThing(object):
         self.mesh = mesh
         self.shader = shader
 
-    def render(self, node):
         self.shader.bind()
+        # self.shader.uniform('worldLocation', 1, False, node.render_matrix.representation)
+        self.shader.uniform('gSampler', 0) #TODO figure out what values need to be here - can it always be 0?
+
+    def render(self, node):
+        # self.shader.bind()
         self.shader.uniform('worldLocation', 1, False, node.render_matrix.representation)
-        self.shader.uniform('gSampler', 0)
+        # self.shader.uniform('gSampler', 0)
 
         self.mesh.render()
 
-        self.shader.unbind()
+        # self.shader.unbind()
 
 def makeThing():
 
-    verts = [
+    vertices = [
         [-1, -1, 0.5],
         [0, -1, -1],
         [1, -1, 0.5],
@@ -57,7 +61,7 @@ def makeThing():
 
     texture = Texture.from_file('data/wood-blocks.jpg')
 
-    mesh = Mesh(verts, texcoords=texcs, texture=texture, indices=indices)
+    mesh = Mesh(vertices, texture_coords=texcs, texture=texture, indices=indices)
 
     vs = """
         #version 330
