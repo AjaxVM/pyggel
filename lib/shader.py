@@ -3,6 +3,8 @@ from OpenGL.GL import *
 from OpenGL.GL import shaders
 
 class Shader(object):
+    __bound_shader = None
+
     def __init__(self, vert_shader, frag_shader, uniforms=None):
         self.vs_source = vert_shader
         self.fs_source = frag_shader
@@ -28,7 +30,10 @@ class Shader(object):
         self._shader = _shader
 
     def bind(self):
+        if self.__bound_shader is self:
+            return
         shaders.glUseProgram(self._shader)
+        self.__bound_shader = self
 
     def unbind(self):
         #note: this should not be done unless needed

@@ -3,9 +3,7 @@ import pygame
 from pygame.locals import *
 
 from OpenGL.GL import *
-# from OpenGL.GL import shaders
 from OpenGL.GLU import *
-# from OpenGL.arrays import vbo
 import numpy
 import math
 
@@ -14,30 +12,11 @@ import math
 from lib.data import Texture
 from lib.math3d import Vec3
 from lib.mesh import Mesh
-from lib.scene import Scene, TransformNode
+from lib.scene import Scene, TransformNode, RenderNode
 from lib.shader import Shader
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
 
-class RenderThing(object):
-    def __init__(self, mesh, shader):
-        self.mesh = mesh
-        self.shader = shader
-
-        self.shader.bind()
-        # self.shader.uniform('worldLocation', 1, False, node.render_matrix.representation)
-        self.shader.uniform('gSampler', 0) #TODO figure out what values need to be here - can it always be 0?
-
-    def render(self, node):
-        # self.shader.bind()
-        self.shader.uniform('worldLocation', 1, False, node.render_matrix.representation)
-        # self.shader.uniform('gSampler', 0)
-
-        self.mesh.render()
-
-        # self.shader.unbind()
-
 def makeThing():
-
     vertices = [
         [-1, -1, 0.5],
         [0, -1, -1],
@@ -63,6 +42,9 @@ def makeThing():
 
     mesh = Mesh(vertices, texture_coords=texcs, texture=texture, indices=indices)
 
+    return mesh
+
+def makeShader():
     vs = """
         #version 330
         layout (location = 0) in vec3 Position;
@@ -92,8 +74,7 @@ def makeThing():
         'gSampler': glUniform1i
     })
     shader.compile()
-
-    return RenderThing(mesh, shader)
+    return shader
 
 def initDisplay(screen_size):
     pygame.display.set_mode(screen_size, OPENGL|DOUBLEBUF)
@@ -106,11 +87,9 @@ def initDisplay(screen_size):
     clear_screen()
 
 def clear_screen():
-    """Clear buffers."""
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT)
 
 def main():
-
     pygame.init()
 
     pygame.display.set_caption('Hello world!')
@@ -123,9 +102,12 @@ def main():
     camera = LookAtCamera(Vec3(0, 0, 0), Vec3(0, 0, 0), 10)
 
     thing = makeThing()
-    scene = Scene(view, camera)
+    shader = makeShader()
+    scene = Scene(view, camera, shader)
     node1 = TransformNode(position=Vec3(0, 0, 0), parent=scene)
+    RenderNode(thing, parent=node1)
     node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))
+    RenderNode(thing, parent=node2)
 
     clock = pygame.time.Clock()
     ms_accum = 0
@@ -166,9 +148,8 @@ def main():
             node1.rotation.y += 0.001
             node2.position.y = math.sin(objx)
             # update node and children
-            scene.update_node()
-        thing.render(node1)
-        thing.render(node2)
+            scene.update()
+        scene.render()
         pygame.display.flip()
 
 main()

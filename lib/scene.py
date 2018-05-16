@@ -94,18 +94,23 @@ class Node(object):
         self._render_matrix = mat4
         return mat4
 
-    def update_node(self):
+    def update(self):
         self.calculate_transform_matrix()
         self.calculate_render_matrix()
         for child in self._children:
-            child.update_node()
+            child.update()
+
+    def render(self):
+        for child in self._children:
+            child.render()
 
 class Scene(Node):
-    def __init__(self, view=None, camera=None):
+    def __init__(self, view=None, camera=None, shader=None):
         super(Scene, self).__init__()
 
         self.view = view
         self.camera = camera
+        self.shader = shader
 
     def get_view_matrix(self):
         if self.view:
@@ -119,12 +124,22 @@ class Scene(Node):
         # todo: how to check dirty?
         self._view_matrix = self.get_view_matrix()
 
-    def update_node(self):
+    def update(self):
         # self.calculate_transform_matrix()
         self.calculate_render_matrix()
         self.calculate_view_matrix()
         for child in self._children:
-            child.update_node()
+            child.update()
+
+    def render(self):
+        # todo: gotta figure out multipass rendering
+        # todo: gotta figure out collection of render nodes to sort/clip
+        # todo: gotta figure out what default uniforms are
+        # todo: gotta figure out what value is needed for gSampler really
+        if self.shader:
+            self.shader.bind()
+            self.shader.uniform('gSampler', 0)
+        super(Scene, self).render()
 
 class TransformNode(Node):
     def __init__(self, position=None, rotation=None, scale=None, parent=None):
@@ -139,3 +154,18 @@ class TransformNode(Node):
 
     def get_local_matrix(self):
         return Mat4.from_transform(self.position, self.rotation, self.scale)
+
+class RenderNode(Node):
+    def __init__(self, mesh, parent=None):
+        super(RenderNode, self).__init__(parent)
+
+        self.mesh = mesh
+
+    # TODO: setup a system to instead collect renderable nodes to clip/sort them
+    # and render that way instead
+    def render(self):
+        if isinstance(self._root, Scene) and self._root.shader:
+            # todo: gotta figure out what the real uniform is we should be passing
+            self._root.shader.uniform('worldLocation', 1, False, self.render_matrix.representation)
+        self.mesh.render()
+        super(RenderNode, self).render()
