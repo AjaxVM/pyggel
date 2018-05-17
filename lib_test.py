@@ -11,36 +11,36 @@ import math
 
 from lib.data import Texture
 from lib.math3d import Vec3
-from lib.mesh import Mesh
+from lib.mesh import TexturedMesh
 from lib.scene import Scene, TransformNode, RenderNode
 from lib.shader import Shader
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
 
 def makeThing():
-    vertices = [
-        [-1, -1, 0.5],
-        [0, -1, -1],
-        [1, -1, 0.5],
-        [0, 1, 0],
-    ]
+    vertices = (
+        (-1, -1, 0.5),
+        (0, -1, -1),
+        (1, -1, 0.5),
+        (0, 1, 0),
+    )
 
-    texcs = [
-        [0, 0],
-        [0.5, 0.5],
-        [1, 0.5],
-        [0.5, 1]
-    ]
+    texcs = (
+        (0, 0),
+        (0.5, 0.5),
+        (1, 0.5),
+        (0.5, 1)
+    )
 
-    indices = [
+    indices = (
         0, 3, 1,
         1, 3, 2,
         2, 3, 0,
         0, 1, 2
-    ]
+    )
 
     texture = Texture.from_file('data/wood-blocks.jpg')
 
-    mesh = Mesh(vertices, texture_coords=texcs, texture=texture, indices=indices)
+    mesh = TexturedMesh(vertices, texture_coords=texcs, texture=texture, indices=indices)
 
     return mesh
 
@@ -48,7 +48,8 @@ def makeShader():
     vs = """
         #version 330
         layout (location = 0) in vec3 Position;
-        layout (location = 1) in vec2 TexCoord;
+        layout (location = 1) in vec3 Normal;
+        layout (location = 2) in vec2 TexCoord;
         uniform mat4 worldLocation;
         out vec4 Color;
         out vec2 TexCoord0;

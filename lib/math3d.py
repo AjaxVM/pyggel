@@ -1,6 +1,7 @@
 
+import math
+
 import numpy
-# import operator
 
 class Vec3(object):
     def __init__(self, *args):
@@ -21,6 +22,42 @@ class Vec3(object):
         else:
             raise TypeError('Invalid arguments for Vec3')
 
+    # math functions/properties
+    @property
+    def magnitude(self):
+        return math.sqrt(self.x**2 + self.y**2 + self.z**2)
+
+    def dot(self, other):
+        # just here for clarity if needed
+        return self * other
+
+    @property
+    def normalized(self):
+        mag = self.magnitude
+        return Vec3(
+            self.x / mag if self.x else 0,
+            self.y / mag if self.y else 0,
+            self.z / mag if self.z else 0
+        )
+
+    def cross(self, other):
+        return Vec3(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x
+        )
+
+    def normalize(self):
+        mag = self.magnitude
+        if self.x:
+            self.x = self.x / mag
+        if self.y:
+            self.y = self.y / mag
+        if self.z:
+            self.z = self.z / mag
+        return self
+
+    # standard math operations
     def __add__(self, other):
         other = Vec3.cast(other)
         return Vec3(self.x + other.x, self.y+other.y, self.z+other.z)
@@ -76,6 +113,12 @@ class Vec3(object):
     def __str__(self):
         return "Vec3 (x%d, y%d, z%d)"%(self.x, self.y, self.z)
 
+    # helpers
+    def __iter__(self):
+        yield self.x
+        yield self.y
+        yield self.z
+
     @staticmethod
     def cast(thing):
         return thing if isinstance(thing, Vec3) else Vec3(thing)
@@ -114,14 +157,14 @@ class Mat4(object):
         return self
 
     def rotate(self, angles):
-        xc = numpy.cos(angles.x)
-        xs = numpy.sin(angles.x)
+        xc = math.cos(angles.x)
+        xs = math.sin(angles.x)
 
-        yc = numpy.cos(angles.y)
-        ys = numpy.sin(angles.y)
+        yc = math.cos(angles.y)
+        ys = math.sin(angles.y)
 
-        zc = numpy.cos(angles.z)
-        zs = numpy.sin(angles.z)
+        zc = math.cos(angles.z)
+        zs = math.sin(angles.z)
 
         self.representation = numpy.matmul(self.representation, numpy.array(
             (
@@ -136,8 +179,8 @@ class Mat4(object):
         return self
 
     def rotate_axis(self, radianAngle, axis='x'):
-        c = numpy.cos(radianAngle)
-        s = numpy.sin(radianAngle)
+        c = math.cos(radianAngle)
+        s = math.sin(radianAngle)
 
         self.representation = numpy.matmul(self.representation, numpy.array(
             (
@@ -161,14 +204,14 @@ class Mat4(object):
         rotation = rotation or Vec3(0)
         scale = scale or Vec3(1)
 
-        xc = numpy.cos(rotation.x)
-        xs = numpy.sin(rotation.x)
+        xc = math.cos(rotation.x)
+        xs = math.sin(rotation.x)
 
-        yc = numpy.cos(rotation.y)
-        ys = numpy.sin(rotation.y)
+        yc = math.cos(rotation.y)
+        ys = math.sin(rotation.y)
 
-        zc = numpy.cos(rotation.z)
-        zs = numpy.sin(rotation.z)
+        zc = math.cos(rotation.z)
+        zs = math.sin(rotation.z)
 
         return Mat4(numpy.array(
             (
@@ -182,3 +225,7 @@ class Mat4(object):
 
     def __mul__(self, other):
         return Mat4(numpy.matmul(self.representation, other.representation))
+
+    def __imul__(self, other):
+        self.representation = numpy.matmul(self.representation, other.representation)
+        return self
