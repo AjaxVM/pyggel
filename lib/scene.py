@@ -138,6 +138,7 @@ class Scene(Node):
         # todo: gotta figure out what value is needed for gSampler really
         if self.shader:
             self.shader.bind()
+            # TODO: this really shouldn't be handler here - basically makes us use a single texture and is baked in...
             self.shader.uniform('PYGGEL_TexSampler', 0)
         super(Scene, self).render()
 

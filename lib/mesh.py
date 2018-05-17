@@ -107,6 +107,7 @@ class Mesh(object):
         self.data_buffer.unbind()
 
     def render(self):
+        # TODO: this should probably be passed the currently active shader to make this work
         self.index_buffer.bind()
         self.data_buffer.bind()
         if self.texture:
