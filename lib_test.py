@@ -11,7 +11,7 @@ import math
 
 from lib.data import Texture
 from lib.math3d import Vec3
-from lib.mesh import TexturedMesh
+from lib.mesh import Mesh
 from lib.scene import Scene, TransformNode, RenderNode
 from lib.shader import Shader
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
@@ -40,39 +40,43 @@ def makeThing():
 
     texture = Texture.from_file('data/wood-blocks.jpg')
 
-    mesh = TexturedMesh(vertices, texture_coords=texcs, texture=texture, indices=indices)
+    mesh = Mesh(vertices, texture_coords=texcs, texture=texture, indices=indices)
 
     return mesh
 
 def makeShader():
     vs = """
         #version 330
-        layout (location = 0) in vec3 Position;
-        layout (location = 1) in vec3 Normal;
-        layout (location = 2) in vec2 TexCoord;
-        uniform mat4 worldLocation;
+        layout (location = 0) in vec3 PYGGEL_Position;
+        layout (location = 1) in vec3 PYGGEL_Normal;
+        layout (location = 2) in vec2 PYGGEL_TexCoord;
+        layout (location = 3) in vec4 PYGGEL_Color;
+
+        uniform mat4 PYGGEL_Transformation;
+
         out vec4 Color;
         out vec2 TexCoord0;
 
         void main() {
-            Color = vec4(clamp(Position, 0.0, 1.0), 1.0);
-            gl_Position = vec4(Position, 1.0) * worldLocation;
-            TexCoord0 = TexCoord;
+            Color = PYGGEL_Color * vec4(clamp(PYGGEL_Position, 0.0, 1.0), 1.0);
+            gl_Position = vec4(PYGGEL_Position, 1.0) * PYGGEL_Transformation;
+            TexCoord0 = PYGGEL_TexCoord;
         }"""
     fs = """
         #version 330
         in vec4 Color;
         in vec2 TexCoord0;
-        uniform sampler2D gSampler;
+        uniform sampler2D PYGGEL_TexSampler;
+
+        out vec4 FragColor;
 
         void main() {
-            // gl_FragColor = Color;
-            gl_FragColor = texture2D(gSampler, TexCoord0.st) * Color;
+            FragColor = texture2D(PYGGEL_TexSampler, TexCoord0.st) * Color;
         }"""
 
     shader = Shader(vs, fs, {
-        'worldLocation': glUniformMatrix4fv,
-        'gSampler': glUniform1i
+        'PYGGEL_Transformation': glUniformMatrix4fv,
+        'PYGGEL_TexSampler': glUniform1i
     })
     shader.compile()
     return shader

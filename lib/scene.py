@@ -138,7 +138,7 @@ class Scene(Node):
         # todo: gotta figure out what value is needed for gSampler really
         if self.shader:
             self.shader.bind()
-            self.shader.uniform('gSampler', 0)
+            self.shader.uniform('PYGGEL_TexSampler', 0)
         super(Scene, self).render()
 
 class TransformNode(Node):
@@ -166,6 +166,6 @@ class RenderNode(Node):
     def render(self):
         if isinstance(self._root, Scene) and self._root.shader:
             # todo: gotta figure out what the real uniform is we should be passing
-            self._root.shader.uniform('worldLocation', 1, False, self.render_matrix.representation)
+            self._root.shader.uniform('PYGGEL_Transformation', 1, False, self.render_matrix.representation)
         self.mesh.render()
         super(RenderNode, self).render()
