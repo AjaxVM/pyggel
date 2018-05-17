@@ -1,0 +1,46 @@
+Figure out how to check if we have any data for texcs (or color or whatnot)
+Can we check if the vertex attrib is enabled or not?
+No we cannot - will need specific shaders for each type of thing, or default all values to something meaningful
+
+Can we check if there is an active texture to use? IE we might get tex coords but have no texture...
+Will that just appear white, or how does gl do that.
+Also, what does the param for a sampler uniform mean - just passing 0 atm...
+
+get other types of nodes going (render, light)
+figure out a good way to let nodes add details without having to have root node need to be able to do all functions
+or just bite bullet and do it that way
+
+Consider using pyglm for math instead of numpy
+
+Will need to make Mesh REQUIRE all fields in it's definition
+Can maybe default params if they are missing? IE color: vec4(1), texcs: vec2(0)
+Can calculate triangle normals if they are not passed (will need to figure out the normal/parallax maps)
+
+Shaders created to handle Mesh definition X Light definition
+
+Calculate most effictive lights per mesh as:
+    Light Intensity / Distance from Mesh
+On tie (perhaps with threshold) elect to use closest light
+This is simple alternative to deferred lighting perhaps?
+
+
+Make sure to flag dependencies for our lib so we can add it to pip and have it work properly
+
+Try again to use non-indexed writes and see how much faster it is
+Add function to unwrap a mesh so that indexes are linear (0,1,2...N) and duplicate verts as necessary to allow this
+Make normal calculation function take vertices/indices as arguments (indices being optional)
+
+Can we simply specify stride of VBO data and unpack in shader maybe?
+
+Check if setting the data format (stride/offset, etc.) at build time is sufficient or causes issues...
+    It is waaaay faster if it is not something that has to be updated all the time
+
+Consider using Pyrr for math
+    Seems to be a no go, timeit shows our Vec3 being considerably faster than Pyrr's (possibly due to not putting everything into numpy?)
+    for instantiation and dot product against self
+
+    PyGLM, on the other hand, appears to run considerably faster - so might be worth converting to use it
+    Or maybe, make it an optional enhancement where things use it if possible, but fallback to pure python implementation?
+    There is the question about whether we can coerce glm types as args to OpenGL though...
+        https://github.com/Zuzu-Typ/PyGLM/issues/1
+    It would be cool to use the built in perspective and such matrices instead of building them...

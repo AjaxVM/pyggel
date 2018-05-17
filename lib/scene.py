@@ -138,7 +138,7 @@ class Scene(Node):
         # todo: gotta figure out what value is needed for gSampler really
         if self.shader:
             self.shader.bind()
-            self.shader.uniform('PYGGEL_TexSampler', 1)
+            self.shader.uniform('PYGGEL_TexSampler', 0)
         super(Scene, self).render()
 
 class TransformNode(Node):
