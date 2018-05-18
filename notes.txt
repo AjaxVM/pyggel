@@ -50,3 +50,21 @@ Maybe define render passes that have attributes like, whether they affect transp
 And, they have a shader attached, instead of passing a shader around everywhere
 
 We need a lot of optimizations about pre_render, shader values, etc.
+
+Implement simple HDR with exposure mapping: https://learnopengl.com/Advanced-Lighting/HDR
+
+Render pipeline (forward):
+    # use a single shader that can handle normal map/etc. to combine shiz
+    Update nodes
+    collect render nodes
+    split render nodes into opaque/transparent
+    order transparent back to front
+    order opaque front to back
+    collect lights
+        Possibly figure out the N most impactful lights to each object (for forward rendering)
+    render opaque objects
+        bind only the N lights that impact the most + ambient/directional light(s?)
+    render transparent objects
+        do we need lighting on these or pass for now?
+
+Figure out how to define/store/render materials
