@@ -12,8 +12,9 @@ import math
 from lib.data import Texture
 from lib.math3d import Vec3
 from lib.mesh import Mesh
-from lib.scene import Scene, TransformNode, RenderNode
+from lib.scene import Scene, TransformNode, RenderNode, LightNode
 from lib.shader import Shader
+from lib.light import AmbientLight
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
 
 def makeThing():
@@ -56,27 +57,36 @@ def makeShader():
 
         out vec4 Color;
         out vec2 TexCoord0;
+        out vec3 Normal;
 
         void main() {
-            Color = PYGGEL_Color * vec4(clamp(PYGGEL_Position, 0.0, 1.0), 1.0);
+            Color = PYGGEL_Color;
             gl_Position = vec4(PYGGEL_Position, 1.0) * PYGGEL_Transformation;
             TexCoord0 = PYGGEL_TexCoord;
+            Normal = PYGGEL_Normal;
         }"""
     fs = """
         #version 330
         in vec4 Color;
         in vec2 TexCoord0;
         uniform sampler2D PYGGEL_TexSampler;
+        uniform vec3 PYGGEL_AmbientColor;
+        uniform float PYGGEL_AmbientIntensity;
 
         out vec4 FragColor;
 
         void main() {
-            FragColor = texture2D(PYGGEL_TexSampler, TexCoord0.st) * Color;
+            FragColor = texture2D(PYGGEL_TexSampler, TexCoord0.st) *
+                        Color *
+                        vec4(PYGGEL_AmbientColor, 1.0f) *
+                        PYGGEL_AmbientIntensity;
         }"""
 
     shader = Shader(vs, fs, {
         'PYGGEL_Transformation': glUniformMatrix4fv,
-        'PYGGEL_TexSampler': glUniform1i
+        'PYGGEL_TexSampler': glUniform1i,
+        'PYGGEL_AmbientColor': glUniform3f,
+        'PYGGEL_AmbientIntensity': glUniform1f
     })
     shader.compile()
     return shader
@@ -109,6 +119,8 @@ def main():
     thing = makeThing()
     shader = makeShader()
     scene = Scene(view, camera, shader)
+    light1 = AmbientLight((1, 0.5, 0.5))
+    LightNode(light1, parent=scene)
     node1 = TransformNode(position=Vec3(0, 0, 0), parent=scene)
     RenderNode(thing, parent=node1)
     node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))

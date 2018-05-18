@@ -104,6 +104,15 @@ class Node(object):
         for child in self._children:
             child.render()
 
+    def pre_render(self, shader):
+        # this function is specifically to populate a shader object with params
+        # maybe a name more fitting to that is better?
+
+        # TODO: passing shader around is a little limited, might want to pass something more meaningful
+        #       maybe an object representing the render pass, with params?
+        for child in self._children:
+            child.pre_render(shader)
+
 class Scene(Node):
     def __init__(self, view=None, camera=None, shader=None):
         super(Scene, self).__init__()
@@ -140,6 +149,7 @@ class Scene(Node):
             self.shader.bind()
             # TODO: this really shouldn't be handler here - basically makes us use a single texture and is baked in...
             self.shader.uniform('PYGGEL_TexSampler', 0)
+            super(Scene, self).pre_render(self.shader)
         super(Scene, self).render()
 
 class TransformNode(Node):
@@ -170,3 +180,14 @@ class RenderNode(Node):
             self._root.shader.uniform('PYGGEL_Transformation', 1, False, self.render_matrix.representation)
         self.mesh.render()
         super(RenderNode, self).render()
+
+class LightNode(Node):
+    def __init__(self, light, parent=None):
+        super(LightNode, self).__init__(parent)
+
+        self.light = light
+
+    def pre_render(self, shader):
+        if shader:
+            self.light.bind(shader)
+        super(LightNode, self).pre_render(shader)

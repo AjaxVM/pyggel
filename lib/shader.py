@@ -41,8 +41,12 @@ class Shader(object):
         shaders.glUseProgram(0)
 
     def uniform(self, name, *args):
+        # TODO: cache what values were last set so we don't reset when the same
         if not (self._uniform_map and name in self._uniform_map):
             raise AttributeError("Invalid uniform %s"%name)
         self._uniform_funcs[name](self._uniform_map[name], *args)
+
+    # TODO: some helpers to pass variables to shader without needing to define the uniform func
+    # like, if I want to pass (0.1, 0.2, 0.3) it would figure out that is glUniform3f, etc.
 
 # TODO: make default shaders based on the types of input that can come in

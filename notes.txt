@@ -44,3 +44,6 @@ Consider using Pyrr for math
     There is the question about whether we can coerce glm types as args to OpenGL though...
         https://github.com/Zuzu-Typ/PyGLM/issues/1
     It would be cool to use the built in perspective and such matrices instead of building them...
+
+Maybe define render passes that have attributes like, whether they affect transparent/not, whether they are lit, etc.
+And, they have a shader attached, instead of passing a shader around everywhere
