@@ -10,8 +10,6 @@ get other types of nodes going (render, light)
 figure out a good way to let nodes add details without having to have root node need to be able to do all functions
 or just bite bullet and do it that way
 
-Consider using pyglm for math instead of numpy
-
 Will need to make Mesh REQUIRE all fields in it's definition
 Can maybe default params if they are missing? IE color: vec4(1), texcs: vec2(0)
 Can calculate triangle normals if they are not passed (will need to figure out the normal/parallax maps)
@@ -45,5 +43,10 @@ Consider using Pyrr for math
         https://github.com/Zuzu-Typ/PyGLM/issues/1
     It would be cool to use the built in perspective and such matrices instead of building them...
 
+    Interestingly - PyGLM converting vector was actualyl slower - might need to tweak interface to be more glm friendly?
+    A task for another day though
+
 Maybe define render passes that have attributes like, whether they affect transparent/not, whether they are lit, etc.
 And, they have a shader attached, instead of passing a shader around everywhere
+
+We need a lot of optimizations about pre_render, shader values, etc.

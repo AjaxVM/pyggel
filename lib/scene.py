@@ -100,9 +100,9 @@ class Node(object):
         for child in self._children:
             child.update()
 
-    def render(self):
+    def render(self, shader):
         for child in self._children:
-            child.render()
+            child.render(shader)
 
     def pre_render(self, shader):
         # this function is specifically to populate a shader object with params
@@ -150,7 +150,7 @@ class Scene(Node):
             # TODO: this really shouldn't be handler here - basically makes us use a single texture and is baked in...
             self.shader.uniform('PYGGEL_TexSampler', 0)
             super(Scene, self).pre_render(self.shader)
-        super(Scene, self).render()
+        super(Scene, self).render(self.shader)
 
 class TransformNode(Node):
     def __init__(self, position=None, rotation=None, scale=None, parent=None):
@@ -174,12 +174,12 @@ class RenderNode(Node):
 
     # TODO: setup a system to instead collect renderable nodes to clip/sort them
     # and render that way instead
-    def render(self):
+    def render(self, shader):
         if isinstance(self._root, Scene) and self._root.shader:
             # todo: gotta figure out what the real uniform is we should be passing
             self._root.shader.uniform('PYGGEL_Transformation', 1, False, self.render_matrix.representation)
         self.mesh.render()
-        super(RenderNode, self).render()
+        super(RenderNode, self).render(shader)
 
 class LightNode(Node):
     def __init__(self, light, parent=None):
