@@ -178,6 +178,7 @@ class RenderNode(Node):
         if isinstance(self._root, Scene) and self._root.shader:
             # todo: gotta figure out what the real uniform is we should be passing
             self._root.shader.uniform('PYGGEL_Transformation', 1, False, self.render_matrix.representation)
+            self._root.shader.uniform('PYGGEL_LocalTransformation', 1, False, self.transform_matrix.representation)
         self.mesh.render()
         super(RenderNode, self).render(shader)
 

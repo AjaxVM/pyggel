@@ -14,7 +14,7 @@ from lib.math3d import Vec3
 from lib.mesh import Mesh
 from lib.scene import Scene, TransformNode, RenderNode, LightNode
 from lib.shader import Shader
-from lib.light import AmbientLight
+from lib.light import AmbientLight, DirectionalLight
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
 
 def makeThing():
@@ -54,39 +54,62 @@ def makeShader():
         layout (location = 3) in vec4 PYGGEL_Color;
 
         uniform mat4 PYGGEL_Transformation;
+        uniform mat4 PYGGEL_LocalTransformation;
 
         out vec4 Color;
-        out vec2 TexCoord0;
-        out vec3 Normal;
+        out vec2 TexCoord;
+        out vec4 Normal;
+
+        out mat4 LocalTransformation;
 
         void main() {
             Color = PYGGEL_Color;
-            gl_Position = vec4(PYGGEL_Position, 1.0) * PYGGEL_Transformation;
-            TexCoord0 = PYGGEL_TexCoord;
-            Normal = PYGGEL_Normal;
+            gl_Position = vec4(PYGGEL_Position, 1.0f) * PYGGEL_Transformation;
+            TexCoord = PYGGEL_TexCoord;
+            Normal = vec4(PYGGEL_Normal, 0.0f);
+            LocalTransformation = PYGGEL_LocalTransformation;
         }"""
     fs = """
         #version 330
         in vec4 Color;
-        in vec2 TexCoord0;
+        in vec2 TexCoord;
+        in vec4 Normal;
+        in mat4 LocalTransformation;
+
         uniform sampler2D PYGGEL_TexSampler;
         uniform vec3 PYGGEL_AmbientColor;
         uniform float PYGGEL_AmbientIntensity;
+        uniform vec3 PYGGEL_DirectionalColor;
+        uniform float PYGGEL_DirectionalIntensity;
+        uniform vec3 PYGGEL_DirectionalNormal; // direction
 
         out vec4 FragColor;
 
         void main() {
-            FragColor = texture2D(PYGGEL_TexSampler, TexCoord0.st) *
-                        Color *
-                        vec4(PYGGEL_AmbientColor, 1.0f) *
-                        PYGGEL_AmbientIntensity;
+            vec4 baseColor = texture2D(PYGGEL_TexSampler, TexCoord.st) * Color;
+
+            vec4 ambient = baseColor * vec4(PYGGEL_AmbientColor, 1.0f) * PYGGEL_AmbientIntensity;
+
+            float diffuseNormalIntensity = dot(normalize(Normal * LocalTransformation), vec4(-PYGGEL_DirectionalNormal, 1.0f));
+            vec4 diffuse;
+            if (diffuseNormalIntensity > 0) {
+                diffuse = baseColor * vec4(PYGGEL_DirectionalColor, 1.0f) * PYGGEL_DirectionalIntensity * diffuseNormalIntensity;
+            } else {
+                diffuse = vec4(0,0,0,0);
+            }
+
+            FragColor = ambient + diffuse;
         }"""
 
     shader = Shader(vs, fs, {
         'PYGGEL_Transformation': glUniformMatrix4fv,
+        'PYGGEL_LocalTransformation': glUniformMatrix4fv,
         'PYGGEL_TexSampler': glUniform1i,
         'PYGGEL_AmbientColor': glUniform3f,
-        'PYGGEL_AmbientIntensity': glUniform1f
+        'PYGGEL_AmbientIntensity': glUniform1f,
+        'PYGGEL_DirectionalColor': glUniform3f,
+        'PYGGEL_DirectionalIntensity': glUniform1f,
+        'PYGGEL_DirectionalNormal': glUniform3f
     })
     shader.compile()
     return shader
@@ -119,8 +142,10 @@ def main():
     thing = makeThing()
     shader = makeShader()
     scene = Scene(view, camera, shader)
-    light1 = AmbientLight((1, 0.5, 0.5))
+    light1 = AmbientLight((1, 0.5, 0.5), 0.1)
     LightNode(light1, parent=scene)
+    light2 = DirectionalLight((1, 1, 0.75), 0.5)
+    LightNode(light2, parent=scene)
     node1 = TransformNode(position=Vec3(0, 0, 0), parent=scene)
     RenderNode(thing, parent=node1)
     node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))
