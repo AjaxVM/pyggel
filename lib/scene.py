@@ -149,6 +149,9 @@ class Scene(Node):
             self.shader.bind()
             # TODO: this really shouldn't be handler here - basically makes us use a single texture and is baked in...
             self.shader.uniform('PYGGEL_TexSampler', 0)
+            if self.camera:
+                # print(self.camera.world_position)
+                self.shader.uniform('PYGGEL_CameraPos', *self.camera.world_position)
             super(Scene, self).pre_render(self.shader)
         super(Scene, self).render(self.shader)
 

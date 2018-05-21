@@ -119,9 +119,13 @@ class Camera(object):
         self._rotation = value
         self._dirty = True
 
+    @property
+    def world_position(self):
+        return self._position
+
 class LookFromCamera(Camera):
     def _buildMatrix(self):
-        mat4 = Mat4.fromIdentity()
+        mat4 = Mat4.from_identity()
         mat4.rotate(self._rotation)
         mat4.translate(self._position * -1)
         self._matrix = mat4
@@ -145,4 +149,19 @@ class LookAtCamera(Camera):
     def distance(self, value):
         self.distance = value
         self._dirty = True
+
+    @property
+    def world_position(self):
+        # mat4 = Mat4.from_identity()
+        # mat4.translate(Vec3(0, 0, -self._distance))
+        # mat4.rotate(self._rotation * -1)
+        # mat4.translate(self._position * -1)
+        # return tuple(mat4.representation.dot(numpy.array((0, 0, 1, 1)))[:3])
+
+        # print(self.matrix.representation)
+
+        # return tuple(tuple(self.matrix.representation)[0])[:3]
+        # print(self.matrix.representation)
+        return Vec3(0,0,-self.distance) * self.matrix
+    
 

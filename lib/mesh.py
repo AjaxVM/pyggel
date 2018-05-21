@@ -28,6 +28,12 @@ class Mesh(object):
             'index': 3,
             'num_components': 4,
             'defaultValue': (1, 1, 1, 1)
+        },
+        # TODO: this needs to be a material that is packed in a vec4 probably...
+        'specular_power': {
+            'index': 4,
+            'num_components': 1,
+            'defaultValue': (1,)
         }
     }
     data_np_type = 'f'
@@ -35,11 +41,12 @@ class Mesh(object):
     data_size = sizeof(c_float)
     render_primitive = GL_TRIANGLES
 
-    def __init__(self, vertices, normals=None, texture_coords=None, colors=None, texture=None, indices=None):
-        self.initialize_values(vertices, normals, texture_coords, colors, texture, indices)
+    def __init__(self, vertices, normals=None, texture_coords=None, colors=None, specular_power=None, texture=None, indices=None):
+        # TODO: can we make this initialize smarter???
+        self.initialize_values(vertices, normals, texture_coords, colors, specular_power, texture, indices)
         self.build_arrays()
 
-    def initialize_values(self, vertices=None, normals=None, texture_coords=None, colors=None, texture=None, indices=None):
+    def initialize_values(self, vertices=None, normals=None, texture_coords=None, colors=None, specular_power=None, texture=None, indices=None):
         # TODO: now that things are optimized enough to have one class - might want to revisit if we really want to default everything
         #       ie, texture_coords and colors can probably be omitted if we don't want to use them or something?
         #       or maybe we go back to having some models not have that stuff... hmm
@@ -51,12 +58,15 @@ class Mesh(object):
 
         # this is mainly to support subclasses that don't have all of these
         # to avoid reimplementation
+        # TODO: just loop over data_definition and set things?
         if 'normals' in self.data_definition:
             self.normals = self.default(normals, 'normals')
         if 'texture_coords' in self.data_definition:
             self.texture_coords = self.default(texture_coords, 'texture_coords')
         if 'colors' in self.data_definition:
             self.colors = self.default(colors, 'colors')
+        if 'specular_power' in self.data_definition:
+            self.specular_power = self.default(specular_power, 'specular_power')
 
         self.texture = texture
 

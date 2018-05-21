@@ -81,10 +81,25 @@ class Vec3(object):
         return self
 
     def __mul__(self, other):
+        if isinstance(other, Mat4):
+            # todo
+            x = self.x
+            y = self.y
+            z = self.z
+
+            m = other.representation
+
+            ox = x * m[0][0] + y * m[1][0] + z * m[2][0] + m[3][0]
+            oy = x * m[0][1] + y * m[1][1] + z * m[2][1] + m[3][1]
+            oz = x * m[0][2] + y * m[1][2] + z * m[2][2] + m[3][2]
+            return Vec3(ox, oy, oz)
         other = Vec3.cast(other)
         return Vec3(self.x * other.x, self.y * other.y, self.z * other.z)
 
     def __imul__(self, other):
+        if isinstance(other, Mat4):
+            self.x, self.y, self.z = tuple(self * other)
+            return self
         other = Vec3.cast(other)
         self.x *= other.x
         self.y *= other.y
@@ -111,7 +126,7 @@ class Vec3(object):
         return self.x != other.x or self.y != other.y or self.z != other.z
 
     def __str__(self):
-        return "Vec3 (x%d, y%d, z%d)"%(self.x, self.y, self.z)
+        return "Vec3 (x%6.2f, y%6.2f, z%6.2f)"%(self.x, self.y, self.z)
 
     # helpers
     def __iter__(self):
@@ -224,6 +239,8 @@ class Mat4(object):
         ))
 
     def __mul__(self, other):
+        if isinstance(other, Vec3):
+            return other * self
         return Mat4(numpy.matmul(self.representation, other.representation))
 
     def __imul__(self, other):
