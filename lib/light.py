@@ -65,15 +65,18 @@ class PointLight(Light):
         self._current_id = -1 # not bound
 
     def bind(self, shader):
-        if self in self._bound_lights:
-            return
+        # if self in self._bound_lights:
+        #     return
         # TODO: this needs to be smarter... - possibly an attribute of shader derived from getting the value or something?
         # or it is a uniform set by shader, I dunno
-        if len(self._bound_lights) > MAX_POINT_LIGHTS:
+        if self not in self._bound_lights and len(self._bound_lights) > MAX_POINT_LIGHTS:
             raise Exception('Too many point lights active - max %s'%MAX_POINT_LIGHTS)
 
-        self._current_id = self._get_id()
-        self._bound_lights.append(self)
+        if not self in self._bound_lights:
+            self._bound_lights.append(self)
+            self._current_id = -1
+        if self._current_id == -1:
+            self._current_id = self._get_id()
         shader.uniform(self.shader_params['color']%self._current_id, *self.color)
         shader.uniform(self.shader_params['intensity']%self._current_id, self.intensity)
         shader.uniform(self.shader_params['position']%self._current_id, *self.position)

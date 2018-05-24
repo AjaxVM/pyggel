@@ -6,6 +6,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import numpy
 import math
+import random
 
 # from ctypes import c_void_p, sizeof, c_float
 
@@ -93,7 +94,7 @@ def makeShader():
         const int MAX_POINT_LIGHTS = 4;
         // NOTE: this is a maximum number of lights that may be active for a single fragment - to allow cheaper/easier switching
         //const int MAX_ACTIVE_POINT_LIGHTS = 4;
-        const float MIN_POINT_LIGHT_ATTENUATION = 0.0001f;
+        const float MIN_POINT_LIGHT_ATTENUATION = 0.0f;
 
         struct AmbientLight {
             vec3 color;
@@ -133,8 +134,10 @@ def makeShader():
 
                 vec3 lightReflect = normalize(reflect(light.normal, transNormal.xyz));
                 float specularFactor = dot(vertexToEye, lightReflect);
-                specularFactor = pow(specularFactor, light.specularPower);
-                specular = vec4(light.color * SpecularIntensity * specularFactor, 1.0f);
+                if (specularFactor > 0){
+                    specularFactor = pow(specularFactor, light.specularPower);
+                    specular = vec4(light.color * SpecularIntensity * specularFactor, 1.0f);
+                }
             }
 
             return diffuse + specular;
@@ -143,14 +146,15 @@ def makeShader():
         vec4 calculate_point_light(PointLight light, vec3 vertexToEye) {
             vec3 lightDirection = LocalPosition - light.position;
             float distance = length(lightDirection);
-            float attenuation = light.attenuationConstant + light.attenuationLinear * distance + light.attenuationExponent * distance * distance;
+            float attenuation = light.attenuationConstant +
+                                (light.attenuationLinear * distance) +
+                                (light.attenuationExponent * distance * distance);
 
-            if (attenuation < MIN_POINT_LIGHT_ATTENUATION) {
+            if (attenuation <= MIN_POINT_LIGHT_ATTENUATION) {
                 // basically no effect on this object so skip the more expensive stuff
                 return vec4(0,0,0,0);
             } else {
-                lightDirection = normalize(lightDirection);
-                DirectionalLight dlight = DirectionalLight(light.color, light.intensity, lightDirection, light.specularPower);
+                DirectionalLight dlight = DirectionalLight(light.color, light.intensity, normalize(lightDirection), light.specularPower);
                 return calculate_directional_light(dlight, vertexToEye) / attenuation;
             }
         }
@@ -242,14 +246,12 @@ def main():
     LightNode(light1, parent=scene)
     light2 = DirectionalLight((1, 1, 0.75), 0.5, normal=(1, 1, 1), specular_power=32)
     LightNode(light2, parent=scene)
-    light3 = PointLight((0.5, 0.5, 1), 5, position=(0,0,-2), attenuation_params=(1, 0.5, 0.1))
+    light3 = PointLight((1, 0.75, 0.25), 5, position=(0,0,-3), attenuation_params=(1, 0.5, 0.1), specular_power=32)
     LightNode(light3, parent=scene)
     node1 = TransformNode(position=Vec3(0, 0, 0), parent=scene)
     RenderNode(thing, parent=node1)
     node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))
     RenderNode(thing, parent=node2)
-    # camera_node = TransformNode(position=Vec3(0, 0, 10), parent=scene, scale=Vec3(0.5,2,0.5))
-    # RenderNode(thing, parent=camera_node)
 
     clock = pygame.time.Clock()
     ms_accum = 0
@@ -260,6 +262,11 @@ def main():
     objScale = 0
 
     paused = False
+
+    light3.min_intensity = 2
+    light3.max_intensity = 5
+    light3.intensity_direction = 1
+    light3.greenness = 0.75
 
     while 1:
         clock.tick(9999)
@@ -285,12 +292,24 @@ def main():
         if not paused:
             objx += 0.001
             # TODO: dirty only works on setting whole rotation :/
-            # camera.rotation += Vec3(0.002, 0, 0)
-            camera.rotation += Vec3(0.0001, 0, 0)
+            camera.rotation += Vec3(0.002, 0, 0)
             # camera_node.position = camera.world_position * 0.8
             node1.position.x = math.sin(objx)
             node1.rotation.y += 0.001
             node2.position.y = math.sin(objx)
+
+            # fire effect
+            light3.intensity += random.random() * 0.02 * light3.intensity_direction
+            light3.color = light3.color[0], light3.greenness + math.sin(objx)*0.01, light3.color[2]
+            if random.randint(0,100) == 0:
+                light3.intensity_direction *= -1
+            if light3.intensity < light3.min_intensity:
+                light3.intensity = light3.min_intensity
+                light3.intensity_direction = 1
+            elif light3.intensity > light3.max_intensity:
+                light3.intensity = light3.max_intensity
+                light3.intensity_direction = -1
+
             # update node and children
             scene.update()
         scene.render()
