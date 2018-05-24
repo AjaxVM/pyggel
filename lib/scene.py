@@ -186,6 +186,8 @@ class RenderNode(Node):
         super(RenderNode, self).render(shader)
 
 class LightNode(Node):
+    # TODO: need a way of updating light position based on parent node...
+    # maybe just pass the matrix through to be bound to the shader or something?
     def __init__(self, light, parent=None):
         super(LightNode, self).__init__(parent)
 

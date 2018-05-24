@@ -68,3 +68,14 @@ Render pipeline (forward):
         do we need lighting on these or pass for now?
 
 Figure out how to define/store/render materials
+
+Look into using Uniform buffers for lights
+
+Look at subsurface scattering: https://machinesdontcare.wordpress.com/2008/10/29/subsurface-scatter-shader/
+
+Parse model into opaque and transparent bits (using color only, not texture!)
+Offset transparent parts to 0 (and remember offset) - subtract by average in each direction
+Create a function to get a render node from a mesh - and have it build one and child transform nodes (for offset) with child render node (for transparent part)
+
+TODO: maybe make intensity for lights be calculated in engine and just send color through - so we have fewer calculations to do in gpu?
+Maybe we don't care but I imagine those won't change frequently (but then again, consider a fire which will)

@@ -14,7 +14,7 @@ from lib.math3d import Vec3
 from lib.mesh import Mesh
 from lib.scene import Scene, TransformNode, RenderNode, LightNode
 from lib.shader import Shader
-from lib.light import AmbientLight, DirectionalLight
+from lib.light import AmbientLight, DirectionalLight, PointLight
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
 
 def makeThing():
@@ -88,53 +88,123 @@ def makeShader():
         in vec3 LocalPosition;
         in float SpecularIntensity;
 
-        uniform sampler2D PYGGEL_TexSampler;
-        uniform vec3 PYGGEL_AmbientColor;
-        uniform float PYGGEL_AmbientIntensity;
-        uniform vec3 PYGGEL_DirectionalColor;
-        uniform float PYGGEL_DirectionalIntensity;
-        uniform vec3 PYGGEL_DirectionalNormal; // direction
-        uniform float PYGGEL_SpecularPower;
+        // TODO: light definitions should come in from a uniform buffer so we don't have to ship all this data in
+        //const int MAX_POINT_LIGHTS = 16;
+        const int MAX_POINT_LIGHTS = 4;
+        // NOTE: this is a maximum number of lights that may be active for a single fragment - to allow cheaper/easier switching
+        //const int MAX_ACTIVE_POINT_LIGHTS = 4;
+        const float MIN_POINT_LIGHT_ATTENUATION = 0.0001f;
+
+        struct AmbientLight {
+            vec3 color;
+            float intensity;
+        };
+
+        struct DirectionalLight {
+            vec3 color;
+            float intensity;
+            vec3 normal;
+            float specularPower;
+        };
+
+        struct PointLight {
+            vec3 color;
+            float intensity;
+            vec3 position;
+            float specularPower;
+            float attenuationConstant;
+            float attenuationLinear;
+            float attenuationExponent;
+        };
+
+        vec4 calculate_ambient_light(AmbientLight light) {
+            return vec4(light.color, 1.0f) * light.intensity;
+        }
+
+        vec4 calculate_directional_light(DirectionalLight light, vec3 vertexToEye) {
+            vec4 transNormal = normalize(Normal * LocalTransformation);
+
+            float diffuseNormalIntensity = dot(transNormal, vec4(-light.normal, 1.0f));
+            vec4 diffuse = vec4(0,0,0,0);
+            vec4 specular = vec4(0,0,0,0);
+
+            if (diffuseNormalIntensity > 0) {
+                diffuse = vec4(light.color, 1.0f) * light.intensity * diffuseNormalIntensity;
+
+                vec3 lightReflect = normalize(reflect(light.normal, transNormal.xyz));
+                float specularFactor = dot(vertexToEye, lightReflect);
+                specularFactor = pow(specularFactor, light.specularPower);
+                specular = vec4(light.color * SpecularIntensity * specularFactor, 1.0f);
+            }
+
+            return diffuse + specular;
+        }
+
+        vec4 calculate_point_light(PointLight light, vec3 vertexToEye) {
+            vec3 lightDirection = LocalPosition - light.position;
+            float distance = length(lightDirection);
+            float attenuation = light.attenuationConstant + light.attenuationLinear * distance + light.attenuationExponent * distance * distance;
+
+            if (attenuation < MIN_POINT_LIGHT_ATTENUATION) {
+                // basically no effect on this object so skip the more expensive stuff
+                return vec4(0,0,0,0);
+            } else {
+                lightDirection = normalize(lightDirection);
+                DirectionalLight dlight = DirectionalLight(light.color, light.intensity, lightDirection, light.specularPower);
+                return calculate_directional_light(dlight, vertexToEye) / attenuation;
+            }
+        }
+
         uniform vec3 PYGGEL_CameraPos;
+        uniform sampler2D PYGGEL_TexSampler;
+        uniform AmbientLight PYGGEL_AmbientLight;
+        uniform DirectionalLight PYGGEL_DirectionalLight;
+        uniform PointLight PYGGEL_PointLights[MAX_POINT_LIGHTS];
+        //uniform int PYGGEL_ActivePointLights[MAX_ACTIVE_POINT_LIGHTS];
+
 
         out vec4 FragColor;
 
         void main() {
             vec4 baseColor = texture2D(PYGGEL_TexSampler, TexCoord.st) * Color;
 
-            vec4 ambient = vec4(PYGGEL_AmbientColor, 1.0f) * PYGGEL_AmbientIntensity;
+            vec3 vertexToEye = normalize(PYGGEL_CameraPos - LocalPosition);
 
-            vec4 NormalByLocal = normalize(Normal * LocalTransformation);
+            vec4 lightColor = calculate_ambient_light(PYGGEL_AmbientLight) +
+                              calculate_directional_light(PYGGEL_DirectionalLight, vertexToEye);
 
-            float diffuseNormalIntensity = dot(NormalByLocal, vec4(-PYGGEL_DirectionalNormal, 1.0f));
-            vec4 diffuse = vec4(0,0,0,0);
-            vec4 specular = vec4(0,0,0,0);
-
-            if (diffuseNormalIntensity > 0) {
-                diffuse = vec4(PYGGEL_DirectionalColor, 1.0f) * PYGGEL_DirectionalIntensity * diffuseNormalIntensity;
-
-                vec3 VertexToEye = normalize(PYGGEL_CameraPos - LocalPosition);
-                vec3 LightReflect = normalize(reflect(PYGGEL_DirectionalNormal, NormalByLocal.xyz));
-                float SpecularFactor = dot(VertexToEye, LightReflect);
-                SpecularFactor = pow(SpecularFactor, PYGGEL_SpecularPower);
-                specular = vec4(PYGGEL_DirectionalColor * SpecularIntensity * SpecularFactor, 1.0f);
+            //for (int i = 0; i<MAX_ACTIVE_POINT_LIGHTS; i++) {
+            for (int i = 0; i<MAX_POINT_LIGHTS; i++) {
+                //lightColor += calculate_point_light(PYGGEL_PointLights[PYGGEL_ActivePointLights[i]], vertexToEye); 
+                lightColor += calculate_point_light(PYGGEL_PointLights[i], vertexToEye); 
             }
 
-            FragColor = baseColor * (ambient + diffuse + specular);
-            //FragColor = specular;
+            FragColor = baseColor * lightColor;
         }"""
+
+    # build point light attrs
+    pl_params = {}
+    for i in range(4):
+        pl_params['PYGGEL_PointLights[%s].color'%i] = glUniform3f
+        pl_params['PYGGEL_PointLights[%s].intensity'%i] = glUniform1f
+        pl_params['PYGGEL_PointLights[%s].position'%i] = glUniform3f
+        pl_params['PYGGEL_PointLights[%s].specularPower'%i] = glUniform1f
+        pl_params['PYGGEL_PointLights[%s].attenuationConstant'%i] = glUniform1f
+        pl_params['PYGGEL_PointLights[%s].attenuationLinear'%i] = glUniform1f
+        pl_params['PYGGEL_PointLights[%s].attenuationExponent'%i] = glUniform1f
 
     shader = Shader(vs, fs, {
         'PYGGEL_Transformation': glUniformMatrix4fv,
         'PYGGEL_LocalTransformation': glUniformMatrix4fv,
         'PYGGEL_CameraPos': glUniform3f,
         'PYGGEL_TexSampler': glUniform1i,
-        'PYGGEL_AmbientColor': glUniform3f,
-        'PYGGEL_AmbientIntensity': glUniform1f,
-        'PYGGEL_DirectionalColor': glUniform3f,
-        'PYGGEL_DirectionalIntensity': glUniform1f,
-        'PYGGEL_DirectionalNormal': glUniform3f,
-        'PYGGEL_SpecularPower': glUniform1f
+        'PYGGEL_AmbientLight.color': glUniform3f,
+        'PYGGEL_AmbientLight.intensity': glUniform1f,
+        'PYGGEL_DirectionalLight.color': glUniform3f,
+        'PYGGEL_DirectionalLight.intensity': glUniform1f,
+        'PYGGEL_DirectionalLight.normal': glUniform3f,
+        'PYGGEL_DirectionalLight.specularPower': glUniform1f,
+        **pl_params
     })
     shader.compile()
     return shader
@@ -172,6 +242,8 @@ def main():
     LightNode(light1, parent=scene)
     light2 = DirectionalLight((1, 1, 0.75), 0.5, normal=(1, 1, 1), specular_power=32)
     LightNode(light2, parent=scene)
+    light3 = PointLight((0.5, 0.5, 1), 5, position=(0,0,-2), attenuation_params=(1, 0.5, 0.1))
+    LightNode(light3, parent=scene)
     node1 = TransformNode(position=Vec3(0, 0, 0), parent=scene)
     RenderNode(thing, parent=node1)
     node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))
@@ -213,7 +285,8 @@ def main():
         if not paused:
             objx += 0.001
             # TODO: dirty only works on setting whole rotation :/
-            camera.rotation += Vec3(0.002, 0, 0)
+            # camera.rotation += Vec3(0.002, 0, 0)
+            camera.rotation += Vec3(0.0001, 0, 0)
             # camera_node.position = camera.world_position * 0.8
             node1.position.x = math.sin(objx)
             node1.rotation.y += 0.001
