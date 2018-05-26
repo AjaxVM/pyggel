@@ -14,12 +14,12 @@ from lib.data import Texture
 from lib.light import AmbientLight, DirectionalLight, PointLight
 from lib.math3d import Vec3
 from lib.mesh import Mesh
-from lib.render_engine import RenderEngine
+from lib.render_engine import RenderEngine, SortMethod
 from lib.scene import Scene, TransformNode, RenderNode, LightNode
 from lib.shader import Shader
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
 
-def makeThing():
+def makeThing(transparent=False):
     vertices = (
         (-1, -1, 0.5),
         (0, -1, -1),
@@ -45,7 +45,13 @@ def makeThing():
 
     texture = Texture.from_file('data/wood-blocks.jpg')
 
-    mesh = Mesh(vertices, texture_coords=texcs, texture=texture, indices=indices, specular_power=specular)
+    if transparent:
+        transparent_colors = (
+            (0, 1, 0, 0.5),
+        )*len(indices)
+        mesh = Mesh(vertices, texture_coords=texcs, indices=indices, colors=transparent_colors, specular_power=specular)
+    else:
+        mesh = Mesh(vertices, texture_coords=texcs, texture=texture, indices=indices, specular_power=specular)
 
     return mesh
 
@@ -185,7 +191,8 @@ def makeShader():
                 lightColor += calculate_point_light(PYGGEL_PointLights[i], vertexToEye); 
             }
 
-            FragColor = baseColor * lightColor;
+            FragColor = baseColor * vec4(lightColor.xyz, 1.0f);
+            FragColor = baseColor;
         }"""
 
     # build point light attrs
@@ -223,6 +230,9 @@ def initDisplay(screen_size):
     glFrontFace(GL_CW)
     glCullFace(GL_BACK)
     glEnable(GL_CULL_FACE)
+    # glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
+    glEnable(GL_BLEND)
     clear_screen()
 
 def clear_screen():
@@ -242,9 +252,10 @@ def main():
     camera = LookAtCamera(Vec3(0, 0, 0), Vec3(0, 0, 0), 10)
     # camera = LookFromCamera(Vec3(0, 0, -10))
     thing = makeThing()
+    thingTransparent = makeThing(True)
     shader = makeShader()
     scene = Scene(view, camera)
-    renderEngine = RenderEngine(shader, scene)
+    renderEngine = RenderEngine(shader, scene, SortMethod.default)
 
 
     # populate our scene
@@ -257,7 +268,7 @@ def main():
     node1 = TransformNode(position=Vec3(0, 0, 0), parent=scene)
     RenderNode(thing, parent=node1)
     node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))
-    RenderNode(thing, parent=node2)
+    RenderNode(thingTransparent, parent=node2, transparent=True)
 
     clock = pygame.time.Clock()
     ms_accum = 0
@@ -297,11 +308,12 @@ def main():
         if not paused:
             objx += 0.001
             # TODO: dirty only works on setting whole rotation :/
-            camera.rotation += Vec3(0.002, 0, 0)
+            # camera.rotation += Vec3(0.002, 0, 0)
+            camera.rotation += Vec3(0, 0.002, 0)
 
-            node1.position.x = math.sin(objx)
-            node1.rotation.y += 0.001
-            node2.position.y = math.sin(objx)
+            # node1.position.x = math.sin(objx)
+            # node1.rotation.y += 0.001
+            # node2.position.y = math.sin(objx)
 
             # fire effect
             light3.intensity += random.random() * 0.02 * light3.intensity_direction

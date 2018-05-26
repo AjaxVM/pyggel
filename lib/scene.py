@@ -115,6 +115,9 @@ class Node(object):
         if self._root:
             self._root._remove_node_from_flat(self)
 
+    def get_render_position(self):
+        return Vec3(0,0,0) * self._scene_matrix
+
 class Scene(Node):
     def __init__(self, view=None, camera=None):
         super(Scene, self).__init__()
@@ -125,7 +128,8 @@ class Scene(Node):
         # store for the various nodes that are flagged as being interesting outside
         # for instance, render and light nodes are important to the render_engine
         self.flat_nodes = {
-            'render': [],
+            'render_opaque': [],
+            'render_transparent': [],
             'light': []
         }
 
@@ -177,6 +181,7 @@ class TransformNode(Node):
 
 class RenderNode(Node):
     def __init__(self, mesh, parent=None, transparent=False):
+        # flag which type of renderable object we have so it can be handled properly
         self.node_type = 'render_%s'%('transparent' if transparent else 'opaque')
         super(RenderNode, self).__init__(parent)
 

@@ -95,3 +95,12 @@ Create extrapolation function to take indexed set of verts/texcs/etc.
     and map them into 3 verts -> face rather than reusing so normal mapping works better
 
 How to handle reparenting with the root node reference and flat_list with children?
+
+Figure out how the hell to allow meshes with and without texture - or actually make it that you have to pick one or the other.
+Or... create a blank white texture to use in that case or something stupid...
+
+DONE: Also, figure out why we can't store the vertex attrib data once... without it getting corrupted
+    But, figure out the connection between vertex attribs and vbos and vaos
+
+Consider using a VAO around the vbo and maybe switch away from using PyOpenGL.arrays.vbo
+    Definitely do this!

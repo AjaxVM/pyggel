@@ -108,16 +108,20 @@ class Mesh(object):
         # build vbos
         self.data_buffer = vbo.VBO(self.data_array)
         self.index_buffer = vbo.VBO(self.index_array, target=GL_ELEMENT_ARRAY_BUFFER)
+        self.vao = glGenVertexArrays(1)
 
         # set data format
+        glBindVertexArray(self.vao)
         self.data_buffer.bind()
         for data in data_defs:
             glEnableVertexAttribArray(data[0])
             glVertexAttribPointer(data[0], data[1], self.data_gl_type, False, data_stride * self.data_size, c_void_p(data[2] * self.data_size))
         self.data_buffer.unbind()
+        glBindVertexArray(0)
 
     def render(self):
         # TODO: this should probably be passed the currently active shader to make this work
+        glBindVertexArray(self.vao)
         self.index_buffer.bind()
         self.data_buffer.bind()
         if self.texture:
@@ -125,3 +129,4 @@ class Mesh(object):
         glDrawElements(self.render_primitive, len(self.indices), GL_UNSIGNED_INT, None)
         self.data_buffer.unbind()
         self.index_buffer.unbind()
+        glBindVertexArray(0)
