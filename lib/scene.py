@@ -1,14 +1,10 @@
 
 from .math3d import Vec3, Mat4
 
-# TODO: consider making dirty.py which wraps around things
-# and then tracks when they change
-
-# Because, we need to know if a node is dirty so we kno wwhether to rebuild it's matrices
-# ie if the scene view/camera changed then we must update all render matrices
-# and if the node moved we must update local matrix (and child local matrices)
-
 class Node(object):
+    # node_type flags if this is a special node that we want collected into a flat list in scene
+    node_type = None
+
     def __init__(self, parent=None):
         self._parent = None
         self._root = None
@@ -17,7 +13,7 @@ class Node(object):
 
         self._transform_matrix = None
         self._view_matrix = None # this should be none if not a Scene
-        self._render_matrix = None # view_matrix * matrix
+        self._scene_matrix = None # view_matrix * matrix
 
     # parent/child/root properties and functions
     @property
@@ -27,18 +23,25 @@ class Node(object):
     def parent(self, parent):
         if self._parent:
             self._parent._remove_child(self)
-            self._root = self
+            self.root = self
 
         self._parent = parent
         if parent:
-            self._root = parent._root
+            self.root = parent._root
             parent._add_child(self)
         else:
-            self._root = self
+            self.root = self
 
     @property
     def root(self):
         return self._root
+    @root.setter
+    def root(self, root):
+        if self._root and self._root != self:
+            self._root._remove_node_from_flat(self)
+        self._root = root
+        if root and root != self:
+            root._add_node_to_flat(self)
 
     def _add_child(self, child):
         self._children.append(child)
@@ -61,9 +64,9 @@ class Node(object):
 
     @property
     def render_matrix(self):
-        if not self._render_matrix:
+        if not self._scene_matrix:
             return self.calculate_render_matrix()
-        return self._render_matrix
+        return self._scene_matrix
 
     def get_local_matrix(self):
         return None
@@ -91,7 +94,7 @@ class Node(object):
             else:
                 mat4 = self._root._view_matrix
 
-        self._render_matrix = mat4
+        self._scene_matrix = mat4
         return mat4
 
     def update(self):
@@ -100,26 +103,31 @@ class Node(object):
         for child in self._children:
             child.update()
 
-    def render(self, shader):
-        for child in self._children:
-            child.render(shader)
+    def _add_node_to_flat(self, node):
+        # this does nothing if this is a base Node
+        pass
 
-    def pre_render(self, shader):
-        # this function is specifically to populate a shader object with params
-        # maybe a name more fitting to that is better?
+    def _remove_node_from_flat(self, node):
+        # this does nothing by default
+        pass
 
-        # TODO: passing shader around is a little limited, might want to pass something more meaningful
-        #       maybe an object representing the render pass, with params?
-        for child in self._children:
-            child.pre_render(shader)
+    def __del__(self):
+        if self._root:
+            self._root._remove_node_from_flat(self)
 
 class Scene(Node):
-    def __init__(self, view=None, camera=None, shader=None):
+    def __init__(self, view=None, camera=None):
         super(Scene, self).__init__()
 
         self.view = view
         self.camera = camera
-        self.shader = shader
+
+        # store for the various nodes that are flagged as being interesting outside
+        # for instance, render and light nodes are important to the render_engine
+        self.flat_nodes = {
+            'render': [],
+            'light': []
+        }
 
     def get_view_matrix(self):
         if self.view:
@@ -128,6 +136,19 @@ class Scene(Node):
             return self.view.matrix
         elif self.camera:
             return self.camera.matrix
+
+    def _add_node_to_flat(self, node):
+        nt = node.node_type
+        if nt:
+            if not nt in self.flat_nodes:
+                self.flat_nodes[nt] = []
+            self.flat_nodes[nt].append(node)
+
+    def _remove_node_from_flat(self, node):
+        nt = node.node_type
+        if nt:
+            if nt in self.flat_nodes:
+                self.flat_nodes[nt].remove(node)
 
     def calculate_view_matrix(self):
         # todo: how to check dirty?
@@ -139,21 +160,6 @@ class Scene(Node):
         self.calculate_view_matrix()
         for child in self._children:
             child.update()
-
-    def render(self):
-        # todo: gotta figure out multipass rendering
-        # todo: gotta figure out collection of render nodes to sort/clip
-        # todo: gotta figure out what default uniforms are
-        # todo: gotta figure out what value is needed for gSampler really
-        if self.shader:
-            self.shader.bind()
-            # TODO: this really shouldn't be handler here - basically makes us use a single texture and is baked in...
-            self.shader.uniform('PYGGEL_TexSampler', 0)
-            if self.camera:
-                # print(self.camera.world_position)
-                self.shader.uniform('PYGGEL_CameraPos', *self.camera.world_position)
-            super(Scene, self).pre_render(self.shader)
-        super(Scene, self).render(self.shader)
 
 class TransformNode(Node):
     def __init__(self, position=None, rotation=None, scale=None, parent=None):
@@ -170,30 +176,20 @@ class TransformNode(Node):
         return Mat4.from_transform(self.position, self.rotation, self.scale)
 
 class RenderNode(Node):
-    def __init__(self, mesh, parent=None):
+    node_type = 'render'
+
+    def __init__(self, mesh, parent=None, transparent=False):
         super(RenderNode, self).__init__(parent)
 
         self.mesh = mesh
-
-    # TODO: setup a system to instead collect renderable nodes to clip/sort them
-    # and render that way instead
-    def render(self, shader):
-        if isinstance(self._root, Scene) and self._root.shader:
-            # todo: gotta figure out what the real uniform is we should be passing
-            self._root.shader.uniform('PYGGEL_Transformation', 1, False, self.render_matrix.representation)
-            self._root.shader.uniform('PYGGEL_LocalTransformation', 1, False, self.transform_matrix.representation)
-        self.mesh.render()
-        super(RenderNode, self).render(shader)
+        self.transparent = transparent
 
 class LightNode(Node):
+    node_type = 'light'
+
     # TODO: need a way of updating light position based on parent node...
     # maybe just pass the matrix through to be bound to the shader or something?
     def __init__(self, light, parent=None):
         super(LightNode, self).__init__(parent)
 
         self.light = light
-
-    def pre_render(self, shader):
-        if shader:
-            self.light.bind(shader)
-        super(LightNode, self).pre_render(shader)

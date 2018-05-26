@@ -11,11 +11,12 @@ import random
 # from ctypes import c_void_p, sizeof, c_float
 
 from lib.data import Texture
+from lib.light import AmbientLight, DirectionalLight, PointLight
 from lib.math3d import Vec3
 from lib.mesh import Mesh
+from lib.render_engine import RenderEngine
 from lib.scene import Scene, TransformNode, RenderNode, LightNode
 from lib.shader import Shader
-from lib.light import AmbientLight, DirectionalLight, PointLight
 from lib.view import PerspectiveView, LookAtCamera, LookFromCamera
 
 def makeThing():
@@ -131,7 +132,8 @@ def makeShader():
 
             if (diffuseNormalIntensity > 0) {
                 diffuse = vec4(light.color, 1.0f) * light.intensity * diffuseNormalIntensity;
-
+            }
+            if (diffuseNormalIntensity > 0.1) {
                 vec3 lightReflect = normalize(reflect(light.normal, transNormal.xyz));
                 float specularFactor = dot(vertexToEye, lightReflect);
                 if (specularFactor > 0){
@@ -235,13 +237,17 @@ def main():
 
     initDisplay(screen_size)
 
+    # create our world
     view = PerspectiveView(45, screen_size, 1, 100)
     camera = LookAtCamera(Vec3(0, 0, 0), Vec3(0, 0, 0), 10)
     # camera = LookFromCamera(Vec3(0, 0, -10))
-
     thing = makeThing()
     shader = makeShader()
-    scene = Scene(view, camera, shader)
+    scene = Scene(view, camera)
+    renderEngine = RenderEngine(shader, scene)
+
+
+    # populate our scene
     light1 = AmbientLight((1, 0.5, 0.5), 0.1)
     LightNode(light1, parent=scene)
     light2 = DirectionalLight((1, 1, 0.75), 0.5, normal=(1, 1, 1), specular_power=32)
@@ -288,12 +294,11 @@ def main():
                     paused = not paused
                     print(node2.transform_matrix)
 
-        clear_screen()
         if not paused:
             objx += 0.001
             # TODO: dirty only works on setting whole rotation :/
             camera.rotation += Vec3(0.002, 0, 0)
-            # camera_node.position = camera.world_position * 0.8
+
             node1.position.x = math.sin(objx)
             node1.rotation.y += 0.001
             node2.position.y = math.sin(objx)
@@ -312,7 +317,9 @@ def main():
 
             # update node and children
             scene.update()
-        scene.render()
+
+        clear_screen()
+        renderEngine.render()
         pygame.display.flip()
 
 main()

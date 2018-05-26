@@ -79,3 +79,19 @@ Create a function to get a render node from a mesh - and have it build one and c
 
 TODO: maybe make intensity for lights be calculated in engine and just send color through - so we have fewer calculations to do in gpu?
 Maybe we don't care but I imagine those won't change frequently (but then again, consider a fire which will)
+
+Remove the stupid "dirty" stuff - instead allow objects to register callbacks when they are changed
+
+Think about caching node screen positions (others useful at all?) so we can do sorting/culling efficiently
+    Inherit position from parent unless we are a TransformNode then calculate our own
+    Actually - to do that we need to get LightNode utilizing the transform for position
+    Which... makes it so it makes sense to cache our local position
+    We should really define somewhere what means what, i.e. generally right now (might be exceptions):
+        local position refers to where we want to be in the world - this is represented by the transform matrix
+        view position is where in the world our view is position at - this is represented bt the view matrix (camera pos)
+        world position is where in the world an object is based on local and offset by view - represented by scene matrix
+
+Create extrapolation function to take indexed set of verts/texcs/etc.
+    and map them into 3 verts -> face rather than reusing so normal mapping works better
+
+How to handle reparenting with the root node reference and flat_list with children?
