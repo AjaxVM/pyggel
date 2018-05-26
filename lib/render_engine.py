@@ -23,13 +23,13 @@ class RenderEngine(object):
         self.sort_method = sort_method
 
     def get_sorted_render_nodes(self):
-        return self.sort_method(self.scene.flat_nodes['render'])
+        return self.sort_method(self.scene.flat_nodes['render_opaque'])
 
     def render(self):
         if self.sort_method:
             objs = self.get_sorted_render_nodes()
         else:
-            objs = self.scene.flat_nodes['render']
+            objs = self.scene.flat_nodes['render_opaque']
 
         self.shader.bind()
 

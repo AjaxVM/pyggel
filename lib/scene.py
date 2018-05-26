@@ -176,9 +176,8 @@ class TransformNode(Node):
         return Mat4.from_transform(self.position, self.rotation, self.scale)
 
 class RenderNode(Node):
-    node_type = 'render'
-
     def __init__(self, mesh, parent=None, transparent=False):
+        self.node_type = 'render_%s'%('transparent' if transparent else 'opaque')
         super(RenderNode, self).__init__(parent)
 
         self.mesh = mesh
