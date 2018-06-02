@@ -230,7 +230,7 @@ def initDisplay(screen_size):
     glFrontFace(GL_CW)
     glCullFace(GL_BACK)
     glEnable(GL_CULL_FACE)
-    # glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
     glEnable(GL_BLEND)
     clear_screen()

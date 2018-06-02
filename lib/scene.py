@@ -127,6 +127,7 @@ class Scene(Node):
 
         # store for the various nodes that are flagged as being interesting outside
         # for instance, render and light nodes are important to the render_engine
+        # TODO: rather than this have an oct tree that gets updated... derp
         self.flat_nodes = {
             'render_opaque': [],
             'render_transparent': [],

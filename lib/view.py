@@ -3,9 +3,9 @@ import numpy
 from .math3d import Vec3, Mat4
 
 class View(object):
-    def __init__(self, fov, displaySize, zNear, zFar):
+    def __init__(self, fov, display_size, zNear, zFar):
         self._fov = fov
-        self._displaySize = displaySize
+        self._display_size = display_size
         self._zNear = zNear
         self._zFar = zFar
 
@@ -36,12 +36,12 @@ class View(object):
         self._dirty = True
 
     @property
-    def displaySize(self):
-        return self._displaySize
+    def display_size(self):
+        return self._display_size
 
-    @displaySize.setter
-    def displaySize(self, value):
-        self._displaySize = value
+    @display_size.setter
+    def display_size(self, value):
+        self._display_size = value
         self._dirty = True
 
     @property
@@ -67,7 +67,7 @@ class PerspectiveView(View):
     def _buildMatrix(self):
         zNear = self._zNear
         zFar = self._zFar
-        aspect = 1.0*self._displaySize[0]/self._displaySize[1]
+        aspect = 1.0*self._display_size[0]/self._display_size[1]
         zRange = zNear-zFar
         halfFov = numpy.tan(numpy.radians(self._fov * 0.5))
 
@@ -77,6 +77,35 @@ class PerspectiveView(View):
                 (0, 1 / halfFov, 0, 0),
                 (0, 0, (-zNear - zFar) / zRange, 2.0 * zFar * zNear / zRange),
                 (0, 0, 1, 0)
+            ),
+            'f'
+        ))
+
+class View2D(View):
+    def __init__(self, display_size, depth=1):
+        # depth is how many units in the z (positive) you want to allow, so we can use depth buffer (possibly)
+        super(View2D, self).__init__(0, display_size, 0, depth)
+
+    @property
+    def depth(self):
+        return self._zFar
+    @depth.setter
+    def depth(self, value):
+        self._zFar = value
+        self._dirty = True
+
+    def _buildMatrix(self):
+        zFar = self._zFar
+        xMax = self._display_size[0] - 1
+        yMax = self._display_size[1] - 1
+        zRange = (-1.0 / zFar) if zFar else 0
+
+        self._matrix = Mat4(numpy.array(
+            (
+                (2.0/xMax, 0, 0, -1),
+                (0, -2.0/yMax, 0, 1),
+                (0, 0, zRange, 0),
+                (0, 0, 0, 1)
             ),
             'f'
         ))
@@ -125,6 +154,7 @@ class Camera(object):
 
 class LookFromCamera(Camera):
     def _buildMatrix(self):
+        # TODO: this can be optimized
         mat4 = Mat4.from_identity()
         mat4.rotate(self._rotation)
         mat4.translate(self._position * -1)
@@ -136,6 +166,7 @@ class LookAtCamera(Camera):
         self._distance = distance
 
     def _buildMatrix(self):
+        # TODO: this can probably be optimized
         mat4 = Mat4.from_identity()
         mat4.translate(Vec3(0, 0, self._distance))
         mat4.rotate(self._rotation)
@@ -153,5 +184,30 @@ class LookAtCamera(Camera):
     @property
     def world_position(self):
         return Vec3(0,0,-self.distance) * self.matrix
-    
+
+class Camera2D(Camera):
+    def __init__(self, display_size, position=None, rotation=None):
+        super(Camera2D, self).__init__(position, rotation)
+        self._display_size = display_size
+        self._offset_position = Vec3(display_size[0] * 0.5, display_size[1] * 0.5, 0)
+
+    @property
+    def display_size(self):
+        return self._display_size
+    @display_size.setter
+    def display_size(self, value):
+        self._display_size = value
+        self._offset_position = Vec3(value[0] * 0.5, value[1] * 0.5, 0)
+        self._dirty = True
+
+    @property
+    def world_position(self):
+        return self._position + self._offset_position
+
+    def _buildMatrix(self):
+        # todo: this can be optimized
+        mat4 = Mat4.from_identity()
+        mat4.rotate(self._rotation)
+        mat4.translate(self._position * self._offset_position * -1)
+        self._matrix = mat4
 

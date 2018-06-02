@@ -104,3 +104,33 @@ DONE: Also, figure out why we can't store the vertex attrib data once... without
 
 Consider using a VAO around the vbo and maybe switch away from using PyOpenGL.arrays.vbo
     Definitely do this!
+
+Implement picking in shader as a second output texture (floating point!) with each object having r color indicate object and
+    g color indicating face - b and a can be reserved for some other use...
+
+    Could even allow multiple scene picking so that we could have a game scene and a ui scene
+        so that stuff behind ui doesn't getted picked if ui is picked
+
+For picking - check the actual alpha of the fragment...
+    if it is 0 - then don't render to pick buffer
+    otherwise render at alpha 1 (visible or not) to allow some cool non-square ui components...
+
+UI/2D:
+    2D scene - handles position adjustments ([0,0] -> [0.5,0.5], [-1,-1] -> [0,0], etc.)
+               and absolute positioning calcs (based on screen size)
+
+    text is rendered as glyphs to texture at some resolution (2048 possibly by default, and some size that fits in there?)
+        Need to allow maps of other characters to be passed
+        Need to store the info needed to position characters from metrics/etc. (possibly find a more compressed way to do this?)
+        Rendering glyph positions will convert absolute position to percent based...
+
+    Containers will be nodes on a 2d scene (2d scene being same as regular scene but knowing how to position in window)
+    Might want to create vec2/mat3 representations for transforms for ui elements
+
+    How to do container clipping? I don't really want to create an fbo for each container that is rendered to...
+    Probably can just calculate min/max X/Y and send to FS for clipping or something like that...
+
+    Allow other types of glyphs to be stored (using custom textures but same offset info as text glyphs)
+    Create animation glyph wrapper, that can change colors (gradient or fill), glyph image, position, etc.
+
+Get installation setup.py ready to go so we don't have to have users clone and install reqs themselves
