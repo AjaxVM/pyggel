@@ -8,8 +8,6 @@ import numpy
 import math
 import random
 
-# from ctypes import c_void_p, sizeof, c_float
-
 from pyggel.data import Texture
 from pyggel.light import AmbientLight, DirectionalLight, PointLight
 from pyggel.math3d import Vec3
@@ -17,41 +15,38 @@ from pyggel.mesh import Mesh
 from pyggel.render_engine import RenderEngine, SortMethod
 from pyggel.scene import Scene, TransformNode, RenderNode, LightNode
 from pyggel.shader import Shader
-from pyggel.view import PerspectiveView, LookAtCamera, LookFromCamera
+from pyggel.view import PerspectiveView, LookAtCamera, LookFromCamera, View2D, Camera2D
 
-def makeThing(transparent=False):
+def makeThing():
     vertices = (
-        (-1, -1, 0.5),
-        (0, -1, -1),
-        (1, -1, 0.5),
-        (0, 1, 0),
+        (0, 0, 0),
+        (100, 0, 0),
+        (100, 100, 0),
+        (0, 100, 0),
     )
 
     texcs = (
         (0, 0),
-        (0.5, 0.5),
-        (1, 0.5),
-        (0.5, 1)
+        (1, 0),
+        (1, 1),
+        (0, 1)
+    )
+
+    colors = (
+        (1,1,1,1),
+        (1,0,0,1),
+        (0,1,0,1),
+        (0,0,1,1)
     )
 
     indices = (
-        0, 3, 1,
-        1, 3, 2,
-        2, 3, 0,
-        0, 1, 2
+        2, 1, 0,
+        0, 3, 2
     )
-
-    specular = ((1,),)*len(indices)
 
     texture = Texture.from_file('data/wood-blocks.jpg')
 
-    if transparent:
-        transparent_colors = (
-            (0, 1, 0, 0.5),
-        )*len(indices)
-        mesh = Mesh(vertices, texture_coords=texcs, indices=indices, colors=transparent_colors, specular_power=specular)
-    else:
-        mesh = Mesh(vertices, texture_coords=texcs, texture=texture, indices=indices, specular_power=specular)
+    mesh = Mesh(vertices, texture_coords=texcs, colors = colors, texture=texture, indices=indices)
 
     return mesh
 
@@ -229,8 +224,8 @@ def initDisplay(screen_size):
     glEnable(GL_DEPTH_TEST)
     glFrontFace(GL_CW)
     glCullFace(GL_BACK)
-    glEnable(GL_CULL_FACE)
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+    # glEnable(GL_CULL_FACE)
+    # glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
     glEnable(GL_BLEND)
     clear_screen()
@@ -248,27 +243,17 @@ def main():
     initDisplay(screen_size)
 
     # create our world
-    view = PerspectiveView(45, screen_size, 1, 100)
-    camera = LookAtCamera(Vec3(0, 0, 0), Vec3(0, 0, 0), 10)
-    # camera = LookFromCamera(Vec3(0, 0, -10))
     thing = makeThing()
-    thingTransparent = makeThing(True)
     shader = makeShader()
+    view = View2D(screen_size)
+    camera = Camera2D(screen_size, Vec3(0,0,0))
     scene = Scene(view, camera)
-    renderEngine = RenderEngine(shader, scene, SortMethod.default)
+    renderEngine = RenderEngine(shader, scene)
 
 
     # populate our scene
-    light1 = AmbientLight((1, 0.5, 0.5), 0.1)
-    LightNode(light1, parent=scene)
-    light2 = DirectionalLight((1, 1, 0.75), 0.5, normal=(1, 1, 1), specular_power=32)
-    LightNode(light2, parent=scene)
-    light3 = PointLight((1, 0.75, 0.25), 5, position=(0,0,-3), attenuation_params=(1, 0.5, 0.1), specular_power=32)
-    LightNode(light3, parent=scene)
-    node1 = TransformNode(position=Vec3(0, 0, 0), parent=scene)
+    node1 = TransformNode(position=Vec3(100, 0, 0), parent=scene)
     RenderNode(thing, parent=node1)
-    node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))
-    RenderNode(thingTransparent, parent=node2, transparent=True)
 
     clock = pygame.time.Clock()
     ms_accum = 0
@@ -279,11 +264,6 @@ def main():
     objScale = 0
 
     paused = False
-
-    light3.min_intensity = 2
-    light3.max_intensity = 5
-    light3.intensity_direction = 1
-    light3.greenness = 0.75
 
     while 1:
         clock.tick(9999)
@@ -307,25 +287,9 @@ def main():
 
         if not paused:
             objx += 0.001
-            # TODO: dirty only works on setting whole rotation :/
-            # camera.rotation += Vec3(0.002, 0, 0)
-            camera.rotation += Vec3(0, 0.002, 0)
 
             # node1.position.x = math.sin(objx)
             # node1.rotation.y += 0.001
-            # node2.position.y = math.sin(objx)
-
-            # fire effect
-            light3.intensity += random.random() * 0.02 * light3.intensity_direction
-            light3.color = light3.color[0], light3.greenness + math.sin(objx)*0.01, light3.color[2]
-            if random.randint(0,100) == 0:
-                light3.intensity_direction *= -1
-            if light3.intensity < light3.min_intensity:
-                light3.intensity = light3.min_intensity
-                light3.intensity_direction = 1
-            elif light3.intensity > light3.max_intensity:
-                light3.intensity = light3.max_intensity
-                light3.intensity_direction = -1
 
             # update node and children
             scene.update()
