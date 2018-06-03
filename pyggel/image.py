@@ -25,41 +25,113 @@ class Image(BaseSceneObject):
            colorize is the color of the image"""
         BaseSceneObject.__init__(self)
 
-        if isinstance(filename, data.Texture):
-            self.filename = filename.filename
-            self.texture = filename
-        else:
-            self.filename = filename
-            self.texture = data.Texture(filename)
-
-        self._compile()
+        self.filename = filename
 
         self.pos = pos
+
+        if type(filename) is type(""):
+            self._load_file()
+        elif isinstance(filename, type(self)):
+            self._pimage = filename._pimage
+            self._pimage2 = filename._pimage2
+            self._image_size = filename._image_size
+            self._altered_image_size = filename._altered_image_size
+            self.rect = self._pimage.get_rect()
+            self.to_be_blitted = list(filename.to_be_blitted)
+            self.display_list = filename.display_list
+            self.texture = filename.texture
+            self.offset = filename.offset
+            loaded = True
+        else:
+            self.compile_from_surface(filename)
+            self.filename = None
+            loaded = True
+
+        self.to_be_blitted = []
         self.rotation = rotation
         self.scale = scale
         self.colorize = colorize
 
+    def copy(self):
+        """Return a copy of the image - sharing the same data.DisplayList"""
+        return Image(self, self.pos, self.rotation, self.scale, self.colorize)
+
+    def _get_next_biggest(self, x, y):
+        """Return next largest power of 2 size for an image"""
+        nw = 16
+        nh = 16
+        while nw < x:
+            nw *= 2
+        while nh < y:
+            nh *= 2
+        return nw, nh
+
     def test_on_screen(self):
         """Return whether the image is onscreen or not"""
-        return view.screen.rect2d.colliderect(self.get_rect())
+        r = pygame.rect.Rect(self.pos, self._image_size)
+        return view.screen.rect2d.colliderect(r)
 
-    def copy(self):
-        """Return a copy of the image"""
-        return Image(self.texture, self.pos, self.rotation, self.scale, self.colorize)
+    def _load_file(self):
+        """Load an image file"""
+        self._pimage = pygame.image.load(self.filename)
+
+        sx, sy = self._pimage.get_size()
+        xx, xy = self._get_next_biggest(sx, sy)
+
+        self._pimage2 = pygame.Surface((xx, xy)).convert_alpha()
+        self._pimage2.fill((0,0,0,0))
+
+        self._pimage2.blit(self._pimage, (0,0))
+        self._pimage2 = pygame.transform.flip(self._pimage2, 0, 1)
+
+        self._image_size = (sx, sy)
+        self._altered_image_size = (xx, xy)
+
+        self._texturize(self._pimage2)
+        self.rect = self._pimage.get_rect()
+        self._compile()
+
+    def compile_from_surface(self, surf):
+        """Prepare surf to be stored in a Texture and DisplayList"""
+        self._pimage = surf
+        sx, sy = self._pimage.get_size()
+        xx, xy = self._get_next_biggest(sx, sy)
+
+        self._pimage2 = pygame.Surface((xx, xy)).convert_alpha()
+        self._pimage2.fill((0,0,0,0))
+
+        self._pimage2.blit(self._pimage, (0,0))
+        self._pimage2 = pygame.transform.flip(self._pimage2, 0, 1)
+
+        self._image_size = (sx, sy)
+        self._altered_image_size = (xx, xy)
+
+        self.rect = self._pimage.get_rect()
+
+        self._texturize(self._pimage2)
+        self._compile()
+
+    def _texturize(self, image):
+        """Bind image to a data.Texture"""
+        self.texture = data.Texture(image)
 
     def _compile(self):
         """Compile the Image into a data.DisplayList"""
-        off = self.get_width()/2.0, self.get_height()/2.0
+        self.offset = self.get_width()/2, self.get_height()/2
+        self.rect.center = self.offset[0] + self.pos[0], self.offset[1] + self.pos[1]
 
         self.display_list = data.DisplayList()
         self.display_list.begin()
+
+        off = self.offset
 
         l = -off[0]
         r = off[0]
         t = -off[1]
         b = off[1]
 
-        w, h = self.texture.size_mult
+        w = self.get_width()*1.0/self._altered_image_size[0]
+        h = self.get_height()*1.0/self._altered_image_size[1]
 
         glBegin(GL_QUADS)
         glTexCoord2f(0, 0)
@@ -78,13 +150,25 @@ class Image(BaseSceneObject):
 
         self.display_list.end()
 
+    def blit(self, other, pos):
+        """Blit another image to this one at pos offset - ONLY allowing an image to blitted once
+           other is another image.Image
+           pos is the x,y offset of the blit"""
+        self.remove_blit(other)
+        self.to_be_blitted.append([other, pos])
+
+    def blit_again(self, other, pos):
+        """Same as blit, except you can blit the same image multiple times"""
+        self.to_be_blitted.append([other, pos])
+
     def render(self, camera=None):
         """Render the image
            camera can be None or the camera the scene is using"""
         if not self.test_on_screen():
             return None
 
-        ox, oy = self.get_width()/2.0, self.get_height()/2.0
+        ox, oy = self.offset
+        h, w = self.get_size()
 
         pos = self.pos
 
@@ -102,27 +186,58 @@ class Image(BaseSceneObject):
 
         glColor(*self.colorize)
         self.texture.bind()
+        if self.outline:
+            misc.outline(self.display_list, self.outline_color, self.outline_size, True)
         self.display_list.render()
         glPopMatrix()
+        if self.to_be_blitted:
+            view.screen.push_clip2d((int(pos[0]), int(pos[1])), (int(w), int(h)))
+            for i in self.to_be_blitted:
+                x, y = i[1]
+                x += pos[0]
+                y += pos[1]
+                o = i[0].pos
+                i[0].pos = (x, y)
+                i[0].render()
+                i[0].pos = o
+            view.screen.pop_clip()
 
     def get_width(self):
         """Return the width in pixels of the image"""
-        return self.texture.size[0]
+        return self._image_size[0]
 
     def get_height(self):
         """Return the height in pixels of the image"""
-        return self.texture.size[1]
+        return self._image_size[1]
 
     def get_size(self):
         """Return the width/height size of the image"""
-        return self.texture.size
+        return self._image_size
 
     def get_rect(self):
         """Return a pygame.Rect of the image"""
-        return pygame.Rect(self.pos, self.texture.size)
+        self.rect.center = self.offset[0] + self.pos[0], self.offset[1] + self.pos[1]
+        return self.rect
+
+    def clear_blits(self):
+        """Remove all blits from the image"""
+        self.to_be_blitted = []
+
+    def remove_blit(self, image):
+        """Remove all blits of image from the Image"""
+        for i in self.to_be_blitted:
+            if i[0] == image:
+                self.to_be_blitted.remove(i)
+
+    def sub_image(self, topleft, size):
+        """Return a new Image object representing a smaller region of this Image."""
+        image = self._pimage.subsurface(topleft, size)
+        return Image(image, self.pos, self.rotation, self.scale, self.colorize)
+
 
 class Image3D(Image):
     """A billboarded 3d image"""
+    _all_loaded = {}
     def __init__(self, filename, pos=(0,0,0),
                  rotation=(0,0,0), scale=1,
                  colorize=(1,1,1,1)):
@@ -176,21 +291,67 @@ class Image3D(Image):
             glEnable(GL_LIGHTING)
         glPopMatrix()
 
-    def test_on_screen(self, *args, **kwargs):
+    def blit(self, *args, **kwargs):
         print "Image3D does not support this function!"
 
+    clear_blits = blit
+    remove_blit = blit
+    blit_again = blit
+    test_on_screen = blit
+
     def copy(self):
-        """Return a copy of the Image3D"""
-        return Image3D(self.filename, self.pos, self.rotation, self.scale, self.colorize)
+        """Return a copy og the Image - sharing the same data.DisplayList"""
+        return Image3D(self, self.pos, self.rotation, self.scale, self.colorize)
+
+    def _load_file(self):
+        """Load an image file"""
+        self._pimage = pygame.image.load(self.filename)
+
+        sx, sy = self._pimage.get_size()
+        xx, xy = self._get_next_biggest(sx, sy)
+
+        self._pimage2 = pygame.Surface((xx, xy)).convert_alpha()
+        self._pimage2.fill((0,0,0,0))
+
+        self._pimage2.blit(self._pimage, (0,0))
+
+        self._pimage2 = pygame.transform.flip(self._pimage2, 0, 1)
+
+        self._image_size = (sx, sy)
+        self._altered_image_size = (xx, xy)
+
+        self._texturize(self._pimage2)
+        self._compile()
+        self.rect = self._pimage.get_rect()
+
+    def compile_from_surface(self, surf):
+        """Prepare a pygame.Surface object for 3d rendering"""
+        self._pimage = surf
+        sx, sy = self._pimage.get_size()
+        xx, xy = self._get_next_biggest(sx, sy)
+
+        self._pimage2 = pygame.Surface((xx, xy)).convert_alpha()
+        self._pimage2.fill((0,0,0,0))
+
+        self._pimage2.blit(self._pimage, (0,0))
+
+        self._pimage2 = pygame.transform.flip(self._pimage2, 0, 1)
+
+        self._image_size = (sx, sy)
+        self._altered_image_size = (xx, xy)
+
+        self._texturize(self._pimage2)
+        self._compile()
 
     def _compile(self):
         """Compile the rendering data into a data.DisplayList"""
-        off = self.get_width()/2, self.get_height()/2
+        self.offset = self.get_width()/2, self.get_height()/2
 
         self.display_list = data.DisplayList()
         self.display_list.begin()
 
-        w, h = self.texture.size_mult
+        w = self.get_width()*1.0/self._altered_image_size[0]
+        h = self.get_height()*1.0/self._altered_image_size[1]
 
         gw, gh = self.get_size()
 
@@ -219,17 +380,28 @@ class Image3D(Image):
 
         self.display_list.end()
 
+    def sub_image(self, topleft, size):
+        """Return a new Image3D object representing a smaller region of this Image3D."""
+        image = self._pimage.subsurface(topleft, size)
+        return Image3D(image, self.pos, self.rotation, self.scale, self.colorize)
+
 def create_empty_image(size=(2,2), color=(1,1,1,1)):
     """Same as create_empty_texture, except returns an image.Image instead"""
     view.require_init()
-    i = data.Texture(fill_size=size, fill_color=color, fill_unique=True)
-    return Image(i)
+    i = pygame.Surface(size).convert_alpha()
+    if len(color) == 3:
+        color = color + (1,)
+    i.fill((255,255,255,255))
+    return Image(i, colorize=color)
 
 def create_empty_image3d(size=(2,2), color=(1,1,1,1)):
     """Same as create_empty_texture, except returns an image.Image3D instead"""
     view.require_init()
-    i = data.Texture(fill_size=size, fill_color=color, fill_unique=True)
-    return Image3D(i)
+    i = pygame.Surface(size).convert_alpha()
+    if len(color) == 3:
+        color = color + (1,)
+    i.fill((255,255,255,255))
+    return Image3D(i, colorize=color)
 
 class Animation(BaseSceneObject):
     """A simple object used to store, manipulate, animate and render a bunch of frames of 2d Image obejcts."""
@@ -287,6 +459,9 @@ class Animation(BaseSceneObject):
         frame.pos = self.pos
         frame.rotation = self.rotation
         frame.scale = self.scale
+        frame.outline = self.outline
+        frame.outline_size = self.outline_size
+        frame.outline_color = self.outline_color
         if self.colorize:
             frame.colorize = self.colorize
         frame.render(camera)
@@ -386,6 +561,38 @@ class Animation(BaseSceneObject):
         frame.pos = self.pos
         return frame.get_rect()
 
+    def clear_blits(self):
+        """Remove all blits from all frames of the image"""
+        for i in self.frames:
+            i[0].to_be_blitted = []
+
+    def remove_blit(self, image):
+        """Remove all blits of image from the Image"""
+        for frame in self.frames:
+            frame = frame[0]
+            for i in frame.to_be_blitted:
+                if i[0] == image:
+                    frame.to_be_blitted.remove(i)
+
+    def sub_image(self, topleft, size):
+        """Return a new Image object representing a smaller region of the current frame of this Image."""
+        return self.current().sub_image(topleft, size)
+
+    def blit(self, other, pos):
+        """Blit another image to this one at pos offset - ONLY allowing an image to blitted once
+           other is another image.Image
+           pos is the x,y offset of the blit"""
+        for frame in self.frames:
+            frame = frame[0]
+            frame.remove_blit(other)
+            frame.to_be_blitted.append([other, pos])
+
+    def blit_again(self, other, pos):
+        """Same as blit, except you can blit the same image multiple times"""
+        for frame in self.frames:
+            frame = frame[0]
+            frame.to_be_blitted.append([other, pos])
+
 class Animation3D(Animation):
     """3D version of Animation."""
     def __init__(self, frames=[], pos=(0,0,0), rotation=(0,0,0),
@@ -398,8 +605,13 @@ class Animation3D(Animation):
            colorize is the color of the image"""
         Animation.__init__(self, frames, pos, rotation, scale, colorize)
 
-    def test_on_screen(self, *args, **kwargs):
+    def blit(self, *args, **kwargs):
         print "Animation3D does not support this function!"
+
+    clear_blits = blit
+    remove_blit = blit
+    blit_again = blit
+    test_on_screen = blit
 
     def get_dimensions(self):
         """Return a tuple of (1,1,1) signifying the 3d dimensions of teh image - used by the quad tree"""
@@ -521,7 +733,7 @@ def GIFImage(filename, pos=(0,0),
 def GIFImage3D(filename, pos=(0,0,0),
                rotation=(0,0,0), scale=1,
                colorize=(1,1,1,1)):
-    """Load a GIF image into an Animation3D object.
+    """Load a GIF image into an Animation3D object if PIL is available, otherwise falls back to a static Image3D.
        filename must be the name of a gif image one disk
        pos is the 3d position of the image
        rotation is the 3d rotation of the image

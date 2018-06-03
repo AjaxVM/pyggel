@@ -17,7 +17,6 @@ def main():
     emitter2.visible = False
 
     scene = pyggel.scene.Scene()
-    scene.camera = camera
     scene.add_3d_blend(emitter)
     scene.add_3d_blend(emitter2)
 
@@ -38,7 +37,7 @@ def main():
             emitter2.visible = not emitter2.visible
 
         view.clear_screen()
-        scene.render()#camera)
+        scene.render(camera)
         view.refresh_screen()
 
 main()

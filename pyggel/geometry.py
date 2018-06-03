@@ -5,11 +5,12 @@ This library (PYGGEL) is licensed under the LGPL by Matthew Roe and PYGGEL contr
 The geometry module contains classes used to render 3d geometric primitives.
 """
 
+import math
+
 from include import *
-import view, data, misc
+import view, data, misc, math3d
 from data import Texture, BlankTexture
 from scene import BaseSceneObject
-
 
 class Cube(BaseSceneObject):
     """A geometric cube that can be colored and textured"""
@@ -41,8 +42,6 @@ class Cube(BaseSceneObject):
             texture = Texture(texture)
         if texture:
             self.texture = texture
-        else:
-            self.texture = BlankTexture()
         self.colorize = colorize
 
         self.mirror = mirror
@@ -75,6 +74,7 @@ class Cube(BaseSceneObject):
             self.sides.append(sides[4])
         if not "back" in hide_faces:
             self.sides.append(sides[5])
+
         self.normals = ((0, 0, 1), #front
                         (0, 0, -1), #back
                         (0, -1, 0), #top
@@ -110,8 +110,6 @@ class Cube(BaseSceneObject):
         ox = .25
         oy = .33
         last_tex = None
-
-        glBegin(GL_QUADS)
         for i in self.sides:
             ix = 0
             x, y = self.split_coords[i[5]]
@@ -122,6 +120,8 @@ class Cube(BaseSceneObject):
             else:
                 coords = ((x+ox, y+oy), (x+ox, y), (x, y), (x, y+oy))
 
+            glBegin(GL_QUADS)
+
             glNormal3f(*self.normals[i[6]])
 
             for x in i[:4]:
@@ -129,7 +129,7 @@ class Cube(BaseSceneObject):
                 a, b, c = self.corners[x]
                 glVertex3f(a,b,c)
                 ix += 1
-        glEnd()
+            glEnd()
         self.display_list.end()
 
     def render(self, camera=None):
@@ -144,10 +144,10 @@ class Cube(BaseSceneObject):
         glRotatef(c, 0, 0, 1)
         glScalef(.5*self.size,.5*self.size,.5*self.size)
         try:
-            if not self.scale == (1,1,1):
+            if not self.scale==(1,1,1):
                 glScalef(*self.scale)
         except:
-            if not self.scale == 1:
+            if not self.scale==1:
                 glScalef(self.scale, self.scale, self.scale)
         glColor(*self.colorize)
         self.texture.bind()
@@ -188,8 +188,6 @@ class Quad(Cube, BaseSceneObject):
             texture = Texture(texture)
         if texture:
             self.texture = texture
-        else:
-            self.texture = BlankTexture()
         self.colorize = colorize
 
         self.scale = 1
@@ -229,7 +227,7 @@ class Quad(Cube, BaseSceneObject):
 
     def copy(self):
         """Return a copy of the Quad, sharing the same display list"""
-        n = Quad(self.size, self.pos, self.rotation, self.colorize, self.texture)
+        n = Quad(self.size, self.pos, self.rotation, self.colorize, self.texture, self.hide_faces)
         n.scale = self.scale
         n.display_list = self.display_list
         return n
@@ -249,7 +247,7 @@ class Plane(Quad):
            rotation is the rotation of the quad
            colorize is the color of the quad
            texture can be None, a string filename of an image to load or a data.Texture object - entire texture is mapped to the face
-           tile is the number of times to tile the texture across the Plane,
+           tile is the number of times to tile the texture across the Plane
            hide_faces are the same as for a Quad"""
 
         self.tile = tile
@@ -267,23 +265,23 @@ class Plane(Quad):
         glBegin(GL_QUADS)
         glNormal3f(0,1,0)
         if not "back" in self.hide_faces:
-            glTexCoord2f(self.tile,0)
-            glVertex3f(-1,1,0)
             glTexCoord2f(self.tile,self.tile)
+            glVertex3f(-1,1,0)
+            glTexCoord2f(0,self.tile)
             glVertex3f(1, 1, 0)
-            glTexCoord2f(self.tile,0)
-            glVertex3f(1, -1, -0)
             glTexCoord2f(0,0)
-            glVertex3f(-1, -1, -0)
+            glVertex3f(1, -1, 0)
+            glTexCoord2f(self.tile,0)
+            glVertex3f(-1, -1, 0)
         if not "front" in self.hide_faces:
+            glTexCoord2f(self.tile,0)
+            glVertex3f(-1, -1, 0)
             glTexCoord2f(0,0)
-            glVertex3f(-1, -1, -0)
-            glTexCoord2f(self.tile, 0)
-            glVertex3f(1, -1, -0)
-            glTexCoord2f(self.tile,self.tile)
+            glVertex3f(1, -1, 0)
+            glTexCoord2f(0,self.tile)
             glVertex3f(1, 1, 0)
-            glTexCoord2f(0, self.tile)
-            glVertex3f(-1,1,0)
+            glTexCoord2f(self.tile,self.tile)
+            glVertex3f(-1, 1, 0)
         glEnd()
         self.display_list.end()
 
@@ -300,9 +298,11 @@ class Plane(Quad):
         s = self.size / self.tile if (self.size and self.tile) else self.size
         glScalef(.5*self.size,.5*self.size,.5*self.size)
         try:
-            glScalef(*self.scale)
+            if not self.scale == (1,1,1):
+                glScalef(*self.scale)
         except:
-            glScalef(self.scale, self.scale, self.scale)
+            if not self.scale == 1:
+                glScalef(self.scale, self.scale, self.scale)
         glColor(*self.colorize)
         self.texture.bind()
         self.display_list.render()
@@ -310,7 +310,7 @@ class Plane(Quad):
 
     def copy(self):
         """Return a copy of the Plane - sharing the same display list..."""
-        n = Plane(self.size, self.pos, self.rotation, self.colorize, self.texture, self.tile)
+        n = Plane(self.size, self.pos, self.rotation, self.colorize, self.texture, self.tile, self.hide_faces)
         n.scale = self.scale
         n.display_list = self.display_list
         return n
@@ -353,16 +353,15 @@ class Skybox(Cube):
 class Sphere(BaseSceneObject):
     """A geometric Sphere object that can be colored and textured"""
     def __init__(self, size, pos=(0,0,0), rotation=(0,0,0),
-                 colorize=(1,1,1,1), texture=None, show_inside=False,
-                 detail=10):
+                 colorize=(1,1,1,1), texture=None, detail=30, show_inside=False):
         """Create the Sphere
            size is the radius of the Sphere
            pos ithe position of the sphere
            rotation is the rotation of the sphere
            colorize is the color of the sphere
            texture can be None, a string filename of an image to load or a data.Texture object that will be mapped to the sphere
-           show_inside indicates whether the inside of the sphere is rendered or not
-           detail is the size of each section - lower = smoother/slower"""
+           detail is the level of detail for the Sphere, higher = a more smooth sphere
+           show_inside indicates whether the inside of the sphere is rendered or not"""
         BaseSceneObject.__init__(self)
 
         self.size = size
@@ -373,11 +372,8 @@ class Sphere(BaseSceneObject):
             texture = Texture(texture)
         if texture:
             self.texture = texture
-        else:
-            self.texture = BlankTexture()
-        self.scale = 1
         self.detail = detail
-
+        self.scale = 1
         self.show_inside = show_inside
 
         self.display_list = data.DisplayList()
@@ -393,8 +389,8 @@ class Sphere(BaseSceneObject):
         return self.pos
 
     def _compile(self):
+        """Compile the Sphere into a data.DisplayList"""
         self.display_list.begin()
-
         verts = []
         texcs = []
         norms = []
@@ -411,9 +407,9 @@ class Sphere(BaseSceneObject):
                     for j in xrange(2):
                         s1 = space*i
                         s2 = space*j
-                        x=self.size * math.sin(math3d.safe_div(a+s1, 180)*math.pi) * math.sin(math3d.safe_div(b+s2, 180)*math.pi)
-                        z=self.size * math.cos(math3d.safe_div(a+s1, 180)*math.pi) * math.sin(math3d.safe_div(b+s2, 180)*math.pi)
-                        y=self.size * math.cos(math3d.safe_div(b+s2, 180)*math.pi)
+                        x=math.sin(math3d.safe_div(a+s1, 180)*math.pi) * math.sin(math3d.safe_div(b+s2, 180)*math.pi)
+                        z=math.cos(math3d.safe_div(a+s1, 180)*math.pi) * math.sin(math3d.safe_div(b+s2, 180)*math.pi)
+                        y=math.cos(math3d.safe_div(b+s2, 180)*math.pi)
                         u=math3d.safe_div(a+s1,360)
                         v=math3d.safe_div(b+s2,360)
                         _v.append((x,y,z))
@@ -447,10 +443,13 @@ class Sphere(BaseSceneObject):
         glRotatef(a, 1, 0, 0)
         glRotatef(b, 0, 1, 0)
         glRotatef(c, 0, 0, 1)
+        glScalef(self.size, self.size, self.size)
         try:
-            glScalef(*self.scale)
+            if not self.scale == (1,1,1):
+                glScalef(*self.scale)
         except:
-            glScalef(self.scale, self.scale, self.scale)
+            if not self.scale == 1:
+                glScalef(self.scale, self.scale, self.scale)
         glColor(*self.colorize)
         self.texture.bind()
         if self.outline:
@@ -472,27 +471,30 @@ class Sphere(BaseSceneObject):
 
 class Skyball(Sphere):
     """A Skyball is like a Skybox - except it is a sphere intead of a cube"""
-    def __init__(self, texture=None, colorize=(1,1,1,1), detail=5):
+    def __init__(self, texture=None, colorize=(1,1,1,1), detail=30):
         """Create the Skyball
-           texture can be None, a string filename or the data.Texture object to map to the Sphere
-           colorize is the color of teh skybox
-           detail is the same as Sphere.detail"""
+           texture can be None, a string filename or the data.Texture object to map to the Sphere"""
         Sphere.__init__(self, 1, colorize=colorize,
-                        texture=texture, show_inside=True, detail=detail)
+                        texture=texture, detail=detail)
 
     def render(self, camera):
         """Render the Skyball
            camera is the camera the scene is using"""
         glDisable(GL_LIGHTING)
         glDepthMask(GL_FALSE)
+        gb_cull = glGetBooleanv(GL_CULL_FACE)
+        glDisable(GL_CULL_FACE)
 
         glPushMatrix()
         camera.set_skybox_data()
+        glRotatef(-90, 1, 0, 0)
         Sphere.render(self)
         glPopMatrix()
         glDepthMask(GL_TRUE)
         if view.screen.lighting:
             glEnable(GL_LIGHTING)
+        if gb_cull:
+            glEnable(GL_CULL_FACE)
 
     def copy(self):
         """Return a copy of teh Skyball - sharing the same dadta.DisplayList"""
@@ -500,141 +502,3 @@ class Skyball(Sphere):
         n.scale = self.scale
         n.display_list = self.display_list
         return n
-
-
-#Pyweek changes:
-import math3d, math
-class Pyramid(BaseSceneObject):
-    """A geometric pyramid that can be colored and textured"""
-    def __init__(self, size, pos=(0,0,0), rotation=(0,0,0),
-                 colorize=(1,1,1,1), texture=None, hide_faces=[]):
-        BaseSceneObject.__init__(self)
-
-        self.hide_faces = hide_faces
-
-        self.size = size
-        self.pos = pos
-        self.rotation = rotation
-        if type(texture) is type(""):
-            texture = Texture(texture)
-        if texture:
-            self.texture = texture
-        else:
-            self.texture = BlankTexture()
-        self.colorize = colorize
-
-        self.scale = 1
-
-        self.display_list = data.DisplayList()
-
-        self._compile()
-
-    def _compile(self):
-        """Compile the cube's rendering into a data.DisplayList"""
-        self.display_list.begin()
-
-        top = (0,0.5,0)
-        bottomleft = (-math.sqrt(3)*0.25,-0.5,0.25)
-        bottomright = (math.sqrt(3)*0.25,-0.5,0.25)
-        bottomback = (0,-0.5,-0.5)
-
-        tpoints = [[bottomleft,bottomright,bottomback],
-                   [top, bottomleft, bottomright],
-                   [top, bottomright, bottomback],
-                   [top, bottomback, bottomleft]]
-
-        ttp = []
-        if not "bottom" in self.hide_faces:
-            ttp.append(tpoints[0])
-        if not "front" in self.hide_faces:
-            ttp.append(tpoints[1])
-        if not "right" in self.hide_faces:
-            ttp.append(tpoints[2])
-        if not "left" in self.hide_faces:
-            ttp.append(tpoints[3])
-
-        glBegin(GL_TRIANGLES)
-        for i in ttp:
-            coords = ((0.5,1), (0,0), (1,0))
-
-            glNormal3f(*math3d.calcTriNormal(i[0],i[1],i[2],False))
-
-            for p in xrange(3):
-                glTexCoord2fv(coords[p])
-                glVertex3f(*i[p])
-        glEnd()
-
-        self.display_list.end()
-
-    def render(self, camera=None):
-        """Render the cube
-           camera is None or the camera object the scene is using to render this object"""
-        glPushMatrix()
-        x, y, z = self.pos
-        glTranslatef(x, y, -z)
-        a, b, c = self.rotation
-        glRotatef(a, 1, 0, 0)
-        glRotatef(b, 0, 1, 0)
-        glRotatef(c, 0, 0, 1)
-        glScalef(self.size,self.size,self.size)
-        try:
-            glScalef(*self.scale)
-        except:
-            glScalef(self.scale, self.scale, self.scale)
-        glColor(*self.colorize)
-        self.texture.bind()
-        if self.outline:
-            misc.outline(self.display_list, self.outline_color, self.outline_size)
-        self.display_list.render()
-        glPopMatrix()
-
-class DoublePyramid(Pyramid):
-    """A geometric double-pyramid that can be colored and textured"""
-    def __init__(self, size, pos=(0,0,0), rotation=(0,0,0),
-                 colorize=(1,1,1,1), texture=None, hide_faces=[]):
-        Pyramid.__init__(self, size, pos, rotation, colorize, texture, hide_faces)
-
-    def _compile(self):
-        """Compile the cube's rendering into a data.DisplayList"""
-        self.display_list.begin()
-
-        top = (0,0.5,0)
-        bottom = (0,-0.5,0)
-        midleft = (-math.sqrt(3)*0.25,0,0.25)
-        midright = (math.sqrt(3)*0.25,0,0.25)
-        midback = (0,0,-0.5)
-
-        tpoints = [[top, midleft, midright],
-                   [top, midright, midback],
-                   [top, midback, midleft],
-
-                   [bottom,midright,midleft],
-                   [bottom,midleft,midback],
-                   [bottom,midback,midright]]
-        ttp = []
-        if not "topfront" in self.hide_faces:
-            ttp.append(tpoints[0])
-        if not "topright" in self.hide_faces:
-            ttp.append(tpoints[1])
-        if not "topleft" in self.hide_faces:
-            ttp.append(tpoints[2])
-
-        if not "bottomfront" in self.hide_faces:
-            ttp.append(tpoints[3])
-        if not "bottomright" in self.hide_faces:
-            ttp.append(tpoints[4])
-        if not "bottomleft" in self.hide_faces:
-            ttp.append(tpoints[5])
-
-        glBegin(GL_TRIANGLES)
-        for i in ttp:
-            coords = ((0.5,1), (0,0), (1,0))
-
-            glNormal3f(*math3d.calcTriNormal(i[0],i[1],i[2],False))
-
-            for p in xrange(3):
-                glTexCoord2fv(coords[p])
-                glVertex3f(*i[p])
-        glEnd()
-
-        self.display_list.end()

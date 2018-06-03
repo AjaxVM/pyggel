@@ -53,7 +53,7 @@ files = find_data_files('examples_and_tutorials', '*.*')
 robofiles = find_data_files('Robocalypto', '*.*')
 
 setup(name='pyggel',
-      version="0.08-alpha4b", #pyggel.get_version(),
+      version="0.08-alpha4c", #pyggel.get_version(),
       description='PYthon Graphical Game Engine and Libraries',
       author='Matt Roe',
       author_email='RoeBros@gmail.com',

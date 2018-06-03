@@ -259,7 +259,7 @@ def quickCheckError(*args, **kwargs):
 safeCheckError = oglError.ErrorChecker._registeredChecker
 
 def set_debug(boolean):
-    """Enable/Disable OpenGL debugging - specifically, this turns on/off calling of glGetError after every call."""
+    """Enable/Disable OpenGL debugging - specifically this turns on/off calling of glGetError after every call."""
     screen.debug = boolean
     if boolean:
         oglError.ErrorChecker._registeredChecker = safeCheckError
@@ -299,7 +299,9 @@ def set3d():
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     glViewport(0,0,*screen_size)
-    gluPerspective(screen.view_angle, 1.0*screen_size[0]/screen_size[1], screen.close_view, screen.far_view)
+    gluPerspective(screen.view_angle,
+                   1.0*screen_size[0]/screen_size[1],
+                   screen.close_view, screen.far_view)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     glEnable(GL_DEPTH_TEST)
