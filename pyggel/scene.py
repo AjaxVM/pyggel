@@ -173,12 +173,24 @@ class TransformNode(Node):
         # todo: ensure we get vec3s here...
         self.position = position or Vec3(0)
         self.rotation = rotation or Vec3(0)
-        self.scale = scale or Vec3(1)
+        # todo: document this shortcut for scale
+        self.scale = Vec3(scale) if scale else Vec3(1)
 
         # todo: cache our local matrix
 
     def get_local_matrix(self):
         return Mat4.from_transform(self.position, self.rotation, self.scale)
+
+class BillboardTransformNode(TransformNode):
+    def __init__(self, position=None, rotation=None, scale=None, parent=None):
+        super(BillboardTransformNode, self).__init__(position, rotation, scale, parent)
+
+    def get_local_matrix(self):
+        mat4 = super(BillboardTransformNode, self).get_local_matrix()
+        if self.root is not self and self.root.camera:
+            # apply inverse rotation from camera
+            mat4.rotate(-self.root.camera.rotation)
+        return mat4
 
 class RenderNode(Node):
     def __init__(self, mesh, parent=None, transparent=False):

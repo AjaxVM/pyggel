@@ -134,3 +134,6 @@ UI/2D:
     Create animation glyph wrapper, that can change colors (gradient or fill), glyph image, position, etc.
 
 Get installation setup.py ready to go so we don't have to have users clone and install reqs themselves
+
+Rotation is messed up when doing more than one axis... for camera at least... wtf?
+Also, z rotation for camera appears wrong - everything is warping (with what I assume is the screen width being wider than tall?)

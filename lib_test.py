@@ -15,7 +15,7 @@ from pyggel.light import AmbientLight, DirectionalLight, PointLight
 from pyggel.math3d import Vec3
 from pyggel.mesh import Mesh
 from pyggel.render_engine import RenderEngine, SortMethod
-from pyggel.scene import Scene, TransformNode, RenderNode, LightNode
+from pyggel.scene import Scene, TransformNode, RenderNode, LightNode, BillboardTransformNode
 from pyggel.shader import Shader
 from pyggel.view import PerspectiveView, LookAtCamera, LookFromCamera
 
@@ -52,6 +52,39 @@ def makeThing(transparent=False):
         mesh = Mesh(vertices, texture_coords=texcs, indices=indices, colors=transparent_colors, specular_power=specular)
     else:
         mesh = Mesh(vertices, texture_coords=texcs, texture=texture, indices=indices, specular_power=specular)
+
+    return mesh
+
+def make2DThing():
+    vertices = (
+        (-1, -1, 0),
+        (1, -1, 0),
+        (1, 1, 0),
+        (-1, 1, 0),
+    )
+
+    texcs = (
+        (0, 0),
+        (1, 0),
+        (1, 1),
+        (0, 1)
+    )
+
+    colors = (
+        (1,1,1,1),
+        (1,0,0,1),
+        (0,1,0,1),
+        (0,0,1,1)
+    )
+
+    indices = (
+        2, 1, 0,
+        0, 3, 2
+    )
+
+    texture = Texture.from_file('data/wood-blocks.jpg')
+
+    mesh = Mesh(vertices, texture_coords=texcs, colors = colors, texture=texture, indices=indices)
 
     return mesh
 
@@ -253,6 +286,7 @@ def main():
     # camera = LookFromCamera(Vec3(0, 0, -10))
     thing = makeThing()
     thingTransparent = makeThing(True)
+    thing2d = make2DThing()
     shader = makeShader()
     scene = Scene(view, camera)
     renderEngine = RenderEngine(shader, scene, SortMethod.default)
@@ -269,6 +303,8 @@ def main():
     RenderNode(thing, parent=node1)
     node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))
     RenderNode(thingTransparent, parent=node2, transparent=True)
+    node3 = BillboardTransformNode(position=Vec3(-2, 0, 0), parent=node1, scale=0.1)
+    RenderNode(thing2d, parent=node3)
 
     clock = pygame.time.Clock()
     ms_accum = 0
@@ -310,6 +346,7 @@ def main():
             # TODO: dirty only works on setting whole rotation :/
             # camera.rotation += Vec3(0.002, 0, 0)
             camera.rotation += Vec3(0, 0.002, 0)
+            # camera.rotation += Vec3(0, 0, 0.002)
 
             # node1.position.x = math.sin(objx)
             # node1.rotation.y += 0.001

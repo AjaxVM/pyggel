@@ -125,6 +125,9 @@ class Vec3(object):
         other = Vec3.cast(other)
         return self.x != other.x or self.y != other.y or self.z != other.z
 
+    def __neg__(self):
+        return Vec3(self.x * -1, self.y * -1, self.z * -1)
+
     def __str__(self):
         return "Vec3 (x%6.2f, y%6.2f, z%6.2f)"%(self.x, self.y, self.z)
 
@@ -208,6 +211,15 @@ class Mat4(object):
         ))
         return self
 
+    def __mul__(self, other):
+        if isinstance(other, Vec3):
+            return other * self
+        return Mat4(numpy.matmul(self.representation, other.representation))
+
+    def __imul__(self, other):
+        self.representation = numpy.matmul(self.representation, other.representation)
+        return self
+
     # builders
     @staticmethod
     def from_identity():
@@ -237,12 +249,3 @@ class Mat4(object):
             ),
             'f'
         ))
-
-    def __mul__(self, other):
-        if isinstance(other, Vec3):
-            return other * self
-        return Mat4(numpy.matmul(self.representation, other.representation))
-
-    def __imul__(self, other):
-        self.representation = numpy.matmul(self.representation, other.representation)
-        return self
