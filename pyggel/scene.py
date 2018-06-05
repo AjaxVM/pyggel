@@ -186,11 +186,10 @@ class BillboardTransformNode(TransformNode):
         super(BillboardTransformNode, self).__init__(position, rotation, scale, parent)
 
     def get_local_matrix(self):
-        mat4 = super(BillboardTransformNode, self).get_local_matrix()
+        rot = self.rotation
         if self.root is not self and self.root.camera:
-            # apply inverse rotation from camera
-            mat4.rotate(-self.root.camera.rotation)
-        return mat4
+            rot = rot - self.root.camera.rotation
+        return Mat4.from_transform(self.position, rot, self.scale)
 
 class RenderNode(Node):
     def __init__(self, mesh, parent=None, transparent=False):
