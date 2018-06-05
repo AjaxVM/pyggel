@@ -1,4 +1,6 @@
 
+from glm import value_ptr
+
 class SortMethod(object):
 
     # TODO: think about how we want to handle sorting efficiently
@@ -44,12 +46,16 @@ class RenderEngine(object):
             light_node.light.bind(self.shader)
 
         for obj in oObjs:
-            self.shader.uniform('PYGGEL_Transformation', 1, False, obj.render_matrix.representation)
-            self.shader.uniform('PYGGEL_LocalTransformation', 1, False, obj.transform_matrix.representation)
+            # self.shader.uniform('PYGGEL_Transformation', 1, False, obj.render_matrix.representation)
+            self.shader.uniform('PYGGEL_Transformation', 1, False, value_ptr(obj.render_matrix))
+            # self.shader.uniform('PYGGEL_LocalTransformation', 1, False, obj.transform_matrix.representation)
+            self.shader.uniform('PYGGEL_LocalTransformation', 1, False, value_ptr(obj.transform_matrix))
             obj.mesh.render()
 
         if tObjs:
             for obj in tObjs:
-                self.shader.uniform('PYGGEL_Transformation', 1, False, obj.render_matrix.representation)
-                self.shader.uniform('PYGGEL_LocalTransformation', 1, False, obj.transform_matrix.representation)
+                # self.shader.uniform('PYGGEL_Transformation', 1, False, obj.render_matrix.representation)
+                self.shader.uniform('PYGGEL_Transformation', 1, False, value_ptr(obj.render_matrix))
+                # self.shader.uniform('PYGGEL_LocalTransformation', 1, False, obj.transform_matrix.representation)
+                self.shader.uniform('PYGGEL_LocalTransformation', 1, False, value_ptr(obj.transform_matrix))
                 obj.mesh.render()

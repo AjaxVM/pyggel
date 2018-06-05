@@ -7,12 +7,13 @@ from OpenGL.GLU import *
 import numpy
 import math
 import random
+from glm import vec3
 
 # from ctypes import c_void_p, sizeof, c_float
 
 from pyggel.data import Texture
 from pyggel.light import AmbientLight, DirectionalLight, PointLight
-from pyggel.math3d import Vec3
+# from pyggel.math3d import Vec3
 from pyggel.mesh import Mesh
 from pyggel.render_engine import RenderEngine, SortMethod
 from pyggel.scene import Scene, TransformNode, RenderNode, LightNode, BillboardTransformNode
@@ -282,7 +283,8 @@ def main():
 
     # create our world
     view = PerspectiveView(45, screen_size, 1, 100)
-    camera = LookAtCamera(Vec3(0, 0, 0), Vec3(0, 0, 0), 10)
+    # camera = LookAtCamera(Vec3(0, 0, 0), Vec3(0, 0, 0), 10)
+    camera = LookAtCamera(vec3(0, 0, 0), vec3(0, 0, 0), 5)
     # camera = LookFromCamera(Vec3(0, 0, -10))
     thing = makeThing()
     thingTransparent = makeThing(True)
@@ -299,12 +301,15 @@ def main():
     LightNode(light2, parent=scene)
     light3 = PointLight((1, 0.75, 0.25), 5, position=(0,0,-3), attenuation_params=(1, 0.5, 0.1), specular_power=32)
     LightNode(light3, parent=scene)
-    node1 = TransformNode(position=Vec3(0, 0, 0), parent=scene)
+    # node1 = TransformNode(position=Vec3(0, 0, 0), parent=scene)
+    node1 = TransformNode(position=vec3(0, 0, 0), parent=scene)
     RenderNode(thing, parent=node1)
-    node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))
-    RenderNode(thingTransparent, parent=node2, transparent=True)
-    node3 = BillboardTransformNode(position=Vec3(-2, 0, 0), parent=node1, scale=0.1)
-    RenderNode(thing2d, parent=node3)
+    # node2 = TransformNode(position=Vec3(2, 0, 0), parent=node1, scale=Vec3(0.25))
+    node2 = TransformNode(position=vec3(2, 0, 0), parent=node1, scale=vec3(0.25))
+    # RenderNode(thingTransparent, parent=node2, transparent=True)
+    # node3 = BillboardTransformNode(position=Vec3(-2, 0, 0), parent=node1, scale=0.1)
+    node3 = BillboardTransformNode(position=vec3(-2, 0, 0), parent=node1, scale=0.1)
+    # RenderNode(thing2d, parent=node3)
 
     clock = pygame.time.Clock()
     ms_accum = 0
@@ -345,7 +350,8 @@ def main():
             objx += 0.001
             # TODO: dirty only works on setting whole rotation :/
             # camera.rotation += Vec3(0.002, 0, 0)
-            camera.rotation += Vec3(0, 0.002, 0)
+            # camera.rotation += Vec3(0, 0.002, 0)
+            camera.rotation = camera.rotation + vec3(0, 0.002, 0)
             # camera.rotation += Vec3(0, 0, 0.002)
 
             # node1.position.x = math.sin(objx)
@@ -353,16 +359,16 @@ def main():
             # node2.position.y = math.sin(objx)
 
             # fire effect
-            light3.intensity += random.random() * 0.02 * light3.intensity_direction
-            light3.color = light3.color[0], light3.greenness + math.sin(objx)*0.01, light3.color[2]
-            if random.randint(0,100) == 0:
-                light3.intensity_direction *= -1
-            if light3.intensity < light3.min_intensity:
-                light3.intensity = light3.min_intensity
-                light3.intensity_direction = 1
-            elif light3.intensity > light3.max_intensity:
-                light3.intensity = light3.max_intensity
-                light3.intensity_direction = -1
+            # light3.intensity += random.random() * 0.02 * light3.intensity_direction
+            # light3.color = light3.color[0], light3.greenness + math.sin(objx)*0.01, light3.color[2]
+            # if random.randint(0,100) == 0:
+            #     light3.intensity_direction *= -1
+            # if light3.intensity < light3.min_intensity:
+            #     light3.intensity = light3.min_intensity
+            #     light3.intensity_direction = 1
+            # elif light3.intensity > light3.max_intensity:
+            #     light3.intensity = light3.max_intensity
+            #     light3.intensity_direction = -1
 
             # update node and children
             scene.update()

@@ -1,5 +1,6 @@
 
-from .math3d import Vec3, Mat4
+# from .math3d import Vec3, Mat4
+from glm import vec3, vec4, mat4, translate, rotate, scale
 
 
 class Node(object):
@@ -119,7 +120,8 @@ class Node(object):
             self._root._remove_node_from_flat(self)
 
     def get_render_position(self):
-        return Vec3(0, 0, 0) * self._scene_matrix
+        # return Vec3(0, 0, 0) * self._scene_matrix
+        return (self._scene_matrix * vec4(0, 0, 0, 1)).xyz
 
 
 class Scene(Node):
@@ -176,15 +178,25 @@ class TransformNode(Node):
         super(TransformNode, self).__init__(parent)
 
         # todo: ensure we get vec3s here...
-        self.position = position or Vec3(0)
-        self.rotation = rotation or Vec3(0)
+        # self.position = position or Vec3(0)
+        # self.rotation = rotation or Vec3(0)
+        self.position = position or vec3(0)
+        self.rotation = rotation or vec3(0)
         # todo: document this shortcut for scale
-        self.scale = Vec3(scale) if scale else Vec3(1)
+        # self.scale = Vec3(scale) if scale else Vec3(1)
+        self.scale = vec3(scale) if scale else vec3(1)
 
         # todo: cache our local matrix
 
     def get_local_matrix(self):
-        return Mat4.from_transform(self.position, self.rotation, self.scale)
+        # return Mat4.from_transform(self.position, self.rotation, self.scale)
+        mat = mat4(1)
+        mat = translate(mat, self.position)
+        mat = rotate(mat, self.rotation.x, vec3(1,0,0))
+        mat = rotate(mat, self.rotation.y, vec3(0,1,0))
+        mat = rotate(mat, self.rotation.z, vec3(0,0,1))
+        mat = scale(mat, self.scale)
+        return mat
 
 
 class BillboardTransformNode(TransformNode):
@@ -193,10 +205,30 @@ class BillboardTransformNode(TransformNode):
             position, rotation, scale, parent)
 
     def get_local_matrix(self):
-        rot = self.rotation
+        # mat = Mat4.from_transform(self.position, self.rotation, self.scale)
+        # if self.root is not self and self.root.camera:
+        #     mat = Mat4.from_identity()
+        #     mat.translate(self.position)
+        #     mat.rotate(-self.root.camera.rotation)
+        #     mat.rotate(self.rotation)
+        #     mat.scale(self.scale)
+        # return mat
         if self.root is not self and self.root.camera:
-            rot = rot - self.root.camera.rotation
-        return Mat4.from_transform(self.position, rot, self.scale)
+            mat = mat4(1)
+            # mat = mat.translate(self.position)
+            mat = translate(mat, self.position)
+            # mat = mat.rotate(-self.root.camera.rotation)
+            mat = rotate(mat, self.root.camera.rotation.x, vec3(1,0,0))
+            mat = rotate(mat, self.root.camera.rotation.y, vec3(0,1,0))
+            mat = rotate(mat, self.root.camera.rotation.z, vec3(0,0,1))
+            # mat = mat.rotate(self.rotation)
+            mat = rotate(mat, self.rotation.x, vec3(1,0,0))
+            mat = rotate(mat, self.rotation.y, vec3(0,1,0))
+            mat = rotate(mat, self.rotation.z, vec3(0,0,1))
+            # mat = mat.scale(self.scale)
+            mat = scale(mat, self.scale)
+            return mat
+        return super(BillboardTransformNode, self).get_local_matrix()
 
 
 class RenderNode(Node):

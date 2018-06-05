@@ -1,6 +1,6 @@
 
 import math
-
+import glm
 import numpy
 
 
@@ -177,24 +177,68 @@ class Mat4(object):
         return self
 
     def rotate(self, angles):
-        xc = math.cos(angles.x)
-        xs = math.sin(angles.x)
+        # xc = math.cos(angles.x)
+        # xs = math.sin(angles.x)
 
-        yc = math.cos(angles.y)
-        ys = math.sin(angles.y)
+        # yc = math.cos(angles.y)
+        # ys = math.sin(angles.y)
 
-        zc = math.cos(angles.z)
-        zs = math.sin(angles.z)
+        # zc = math.cos(angles.z)
+        # zs = math.sin(angles.z)
 
-        self.representation = numpy.matmul(self.representation, numpy.array(
-            (
-                (yc * zc, zs, -ys, 0),
-                (-zs, xc * zc, xs, 0),
-                (ys, -xs, xc * yc, 0),
-                (0, 0, 0, 1)
-            ),
-            'f'
-        ))
+        # self.representation = numpy.matmul(self.representation, numpy.array(
+        #     (
+        #         (yc * zc, -zs,     ys,      0),
+        #         (zs,      xc * zc, -xs,     0),
+        #         (-ys,     xs,      xc * yc, 0),
+        #         (0,       0,       0,       1)
+        #     ),
+        #     'f'
+        # ))
+
+        rep = self.representation
+        rot = Vec3(angles)
+
+        if rot.x:
+            c = math.cos(rot.x)
+            s = math.sin(rot.x)
+            rep = numpy.matmul(rep, numpy.array(
+                (
+                    (1, 0, 0, 0),
+                    (0, c, -s, 0),
+                    (0, s, c, 0),
+                    (0, 0, 0, 1)
+                ),
+                'f'
+            ))
+
+        if rot.y:
+            c = math.cos(rot.y)
+            s = math.sin(rot.y)
+            rep = numpy.matmul(rep, numpy.array(
+                (
+                    (c, 0, s, 0),
+                    (0, 1, 0, 0),
+                    (-s, 0, c, 0),
+                    (0, 0, 0, 1)
+                ),
+                'f'
+            ))
+
+        if rot.z:
+            c = math.cos(rot.z)
+            s = math.sin(rot.z)
+            rep = numpy.matmul(rep, numpy.array(
+                (
+                    (c, -s, 0, 0),
+                    (s, c, 0, 0),
+                    (0, 0, 1, 0),
+                    (0, 0, 0, 1)
+                ),
+                'f'
+            ))
+
+        self.representation = rep
 
         return self
 
@@ -202,14 +246,18 @@ class Mat4(object):
         c = math.cos(radianAngle)
         s = math.sin(radianAngle)
 
+        x = axis == 'x'
+        y = axis == 'y'
+        z = axis == 'z'
+
         self.representation = numpy.matmul(self.representation, numpy.array(
             (
-                # (1 if axis == 'x' else c, s if axis == 'z' else 0, -s if axis == 'y' else 0, 0),
-                ((c, 1)[axis == 'x'], (0, s)[axis == 'z'], (0, -s)[axis == 'y'], 0),
-                ((0, -s)[axis == 'z'], (c, 1)[axis == 'y'], (0, s)[axis == 'x'], 0),
-                ((0, s)[axis == 'y'], (0, -s)[axis == 'x'], (c, 1)[axis == 'z'], 0),
+                (1 if x else c, -s if z else 0, s if y else 0, 0),
+                (s if z else 0, 1 if y else c, -s if x else 0, 0),
+                (-s if y else 0, s if x else 0, 1 if z else c, 0),
                 (0, 0, 0, 1)
-            )
+            ),
+            'f'
         ))
         return self
 
@@ -234,21 +282,65 @@ class Mat4(object):
         rotation = rotation or Vec3(0)
         scale = scale or Vec3(1)
 
-        xc = math.cos(rotation.x)
-        xs = math.sin(rotation.x)
+        # xc = math.cos(rotation.x)
+        # xs = math.sin(rotation.x)
 
-        yc = math.cos(rotation.y)
-        ys = math.sin(rotation.y)
+        # yc = math.cos(rotation.y)
+        # ys = math.sin(rotation.y)
 
-        zc = math.cos(rotation.z)
-        zs = math.sin(rotation.z)
+        # zc = math.cos(rotation.z)
+        # zs = math.sin(rotation.z)
+
+        # return Mat4(numpy.array(
+        #     (
+        #         (yc * zc * scale.x, zs * scale.x, -ys * scale.x, position.x),
+        #         (-zs * scale.y, xc * zc * scale.y, xs * scale.y, position.y),
+        #         (ys * scale.z, -xs * scale.z, xc * yc * scale.z, position.z),
+        #         (0, 0, 0, 1)
+        #     ),
+        #     'f'
+        # ))
+        return Mat4(numpy.array(
+            (
+                (scale.x, 0, 0, position.x),
+                (0, scale.y, 0, position.y),
+                (0, 0, scale.z, position.z),
+                (0, 0, 0, 1)
+            ),
+            'f'
+        )).rotate(rotation)
+
+    @staticmethod
+    def from_perspective(fov, aspect, near, far):
+        half_fov = math.tan(math.radians(fov * 0.5))
+        z_range = near - far
 
         return Mat4(numpy.array(
             (
-                (yc * zc * scale.x, zs * scale.x, -ys * scale.x, position.x),
-                (-zs * scale.y, xc * zc * scale.y, xs * scale.y, position.y),
-                (ys * scale.z, -xs * scale.z, xc * yc * scale.z, position.z),
+                (1.0 / half_fov * aspect, 0, 0, 0),
+                (0, 1 / half_fov, 0, 0),
+                (0, 0, (-near - far) / z_range, 2.0 * far * near / z_range),
+                (0, 0, 1, 0)
+            ),
+            'f'
+        ))
+
+    @staticmethod
+    def from_ortho(size, near, far):
+        x_max = size[0] - 1
+        y_max = size[1] - 1
+        z_range = (-1.0 / far) if far else 0
+
+        return Mat4(numpy.array(
+            (
+                (2.0 / x_max, 0, 0, -1),
+                (0, -2.0 / y_max, 0, 1),
+                (0, 0, z_range, 0),
                 (0, 0, 0, 1)
             ),
             'f'
         ))
+
+
+
+
