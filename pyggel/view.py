@@ -200,8 +200,7 @@ class Camera2D(Camera):
     def __init__(self, display_size, position=None, rotation=None):
         super(Camera2D, self).__init__(position, rotation)
         self._display_size = display_size
-        self._offset_position = Vec3(
-            display_size[0] * 0.5, display_size[1] * 0.5, 0)
+        self._offset_position = Vec3(display_size[0] * 0.5, display_size[1] * 0.5, 0)
 
     @property
     def display_size(self):

@@ -205,12 +205,9 @@ class Mat4(object):
         self.representation = numpy.matmul(self.representation, numpy.array(
             (
                 # (1 if axis == 'x' else c, s if axis == 'z' else 0, -s if axis == 'y' else 0, 0),
-                ((c, 1)[axis == 'x'], (0, s)[
-                 axis == 'z'], (0, -s)[axis == 'y'], 0),
-                ((0, -s)[axis == 'z'], (c, 1)
-                 [axis == 'y'], (0, s)[axis == 'x'], 0),
-                ((0, s)[axis == 'y'], (0, -s)
-                 [axis == 'x'], (c, 1)[axis == 'z'], 0),
+                ((c, 1)[axis == 'x'], (0, s)[axis == 'z'], (0, -s)[axis == 'y'], 0),
+                ((0, -s)[axis == 'z'], (c, 1)[axis == 'y'], (0, s)[axis == 'x'], 0),
+                ((0, s)[axis == 'y'], (0, -s)[axis == 'x'], (c, 1)[axis == 'z'], 0),
                 (0, 0, 0, 1)
             )
         ))

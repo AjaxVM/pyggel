@@ -202,8 +202,7 @@ class BillboardTransformNode(TransformNode):
 class RenderNode(Node):
     def __init__(self, mesh, parent=None, transparent=False):
         # flag which type of renderable object we have so it can be handled properly
-        self.node_type = 'render_%s' % (
-            'transparent' if transparent else 'opaque')
+        self.node_type = 'render_%s' % ('transparent' if transparent else 'opaque')
         super(RenderNode, self).__init__(parent)
 
         self.mesh = mesh

@@ -6,8 +6,7 @@ from OpenGL.GL import GL_TRIANGLES
 def calculate_normals_for_mesh(mesh):
     if not mesh.render_primitive == GL_TRIANGLES:
         # TODO: handle more.../all???
-        raise Exception(
-            'Cannot calculate normals for non-triangle render types')
+        raise Exception('Cannot calculate normals for non-triangle render types')
 
     normals = [Vec3(0)] * len(mesh.vertices)
 
