@@ -7,9 +7,6 @@ from OpenGL.GLU import *
 import numpy
 import math
 import random
-# from glm import vec3
-
-# from ctypes import c_void_p, sizeof, c_float
 
 from pyggel.data import Texture
 from pyggel.light import AmbientLight, DirectionalLight, PointLight
@@ -354,16 +351,16 @@ def main():
             # node2.position.y = math.sin(objx)
 
             # fire effect
-            # light3.intensity += random.random() * 0.02 * light3.intensity_direction
-            # light3.color = light3.color[0], light3.greenness + math.sin(objx)*0.01, light3.color[2]
-            # if random.randint(0,100) == 0:
-            #     light3.intensity_direction *= -1
-            # if light3.intensity < light3.min_intensity:
-            #     light3.intensity = light3.min_intensity
-            #     light3.intensity_direction = 1
-            # elif light3.intensity > light3.max_intensity:
-            #     light3.intensity = light3.max_intensity
-            #     light3.intensity_direction = -1
+            light3.intensity += random.random() * 0.02 * light3.intensity_direction
+            light3.color = light3.color[0], light3.greenness + math.sin(objx)*0.01, light3.color[2]
+            if random.randint(0,100) == 0:
+                light3.intensity_direction *= -1
+            if light3.intensity < light3.min_intensity:
+                light3.intensity = light3.min_intensity
+                light3.intensity_direction = 1
+            elif light3.intensity > light3.max_intensity:
+                light3.intensity = light3.max_intensity
+                light3.intensity_direction = -1
 
             # update node and children
             scene.update()
