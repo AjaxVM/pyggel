@@ -196,7 +196,7 @@ class BillboardTransformNode(TransformNode):
         if self.root is not self and self.root.camera:
             mat = Mat4.from_identity()
             mat.translate(self.position)
-            mat.rotate(-self.root.camera.rotation)
+            mat.rotate(-self.root.camera.rotation, True)
             mat.rotate(self.rotation)
             mat.scale(self.scale)
         else:

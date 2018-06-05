@@ -342,7 +342,7 @@ def main():
         if not paused:
             objx += 0.001
             # TODO: dirty only works on setting whole rotation :/
-            # camera.rotation += Vec3(0.002, 0, 0)
+            camera.rotation += Vec3(0.002, 0, 0)
             camera.rotation += Vec3(0, 0.002, 0)
             # camera.rotation += Vec3(0, 0, 0.002)
 
