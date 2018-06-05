@@ -1,13 +1,6 @@
 
 from setuptools import setup
 
-# dependencies = [
-#     'numpy>=1.14',
-#     'Pillow>=5',
-#     'pygame>=1.9',
-#     'PyOpenGL>=3.1'
-# ]
-
 with open('requirements.txt') as reqs:
     dependencies = [req.strip() for req in reqs]
 

@@ -2,6 +2,7 @@
 import math
 import numpy
 
+
 class Vec3(object):
     def __init__(self, *args):
         if len(args) == 0:
@@ -148,6 +149,7 @@ class Vec3(object):
 # and should probably be like a subclass of numpy.array or something
 # so we can pass it to uniform
 
+
 class Mat4(object):
     def __init__(self, representation):
         # if nothing is passed just fall back to identity
@@ -229,13 +231,19 @@ class Mat4(object):
             )
 
         if reverse:
-            if _z: rep = numpy.matmul(rep, zrot)
-            if _y: rep = numpy.matmul(rep, yrot)
-            if _x: rep = numpy.matmul(rep, xrot)
+            if _z:
+                rep = numpy.matmul(rep, zrot)
+            if _y:
+                rep = numpy.matmul(rep, yrot)
+            if _x:
+                rep = numpy.matmul(rep, xrot)
         else:
-            if _x: rep = numpy.matmul(rep, xrot)
-            if _y: rep = numpy.matmul(rep, yrot)
-            if _z: rep = numpy.matmul(rep, zrot)
+            if _x:
+                rep = numpy.matmul(rep, xrot)
+            if _y:
+                rep = numpy.matmul(rep, yrot)
+            if _z:
+                rep = numpy.matmul(rep, zrot)
 
         self.representation = rep
 
@@ -289,8 +297,6 @@ class Mat4(object):
             ),
             'f'
         ))
-
-        return mat1
 
     @staticmethod
     def from_ortho(size, near, far):
