@@ -1,6 +1,4 @@
 
-from glm import value_ptr
-
 class SortMethod(object):
 
     # TODO: think about how we want to handle sorting efficiently
@@ -23,14 +21,14 @@ class RenderEngine(object):
         self.sort_method = sort_method
 
     def get_sorted_render_nodes(self):
-        oObjs = self.scene.flat_nodes['render_opaque']
-        tObjs = self.scene.flat_nodes['render_transparent']
+        o_objs = self.scene.flat_nodes['render_opaque']
+        t_objs = self.scene.flat_nodes['render_transparent']
         if self.sort_method:
-            return self.sort_method(oObjs, tObjs)
-        return oObjs, tObjs
+            return self.sort_method(o_objs, t_objs)
+        return o_objs, t_objs
 
     def render(self):
-        oObjs, tObjs = self.get_sorted_render_nodes()
+        o_objs, t_objs = self.get_sorted_render_nodes()
 
         self.shader.bind()
 
@@ -38,24 +36,20 @@ class RenderEngine(object):
         # this should really be a part of binding the texture or something... but how?
         self.shader.uniform('PYGGEL_TexSampler', 0)
         if self.scene.camera:
-            self.shader.uniform('PYGGEL_CameraPos', *self.scene.camera.world_position)
+            self.shader.uniform('PYGGEL_CameraPos', *self.scene.camera.world_position.gl_args)
 
         # TODO: this should really only bind the N most influential lights for an obj
         # so we can have more than 4 of them
         for light_node in self.scene.flat_nodes['light']:
             light_node.light.bind(self.shader)
 
-        for obj in oObjs:
-            # self.shader.uniform('PYGGEL_Transformation', 1, False, obj.render_matrix.representation)
-            self.shader.uniform('PYGGEL_Transformation', 1, False, value_ptr(obj.render_matrix))
-            # self.shader.uniform('PYGGEL_LocalTransformation', 1, False, obj.transform_matrix.representation)
-            self.shader.uniform('PYGGEL_LocalTransformation', 1, False, value_ptr(obj.transform_matrix))
+        for obj in o_objs:
+            self.shader.uniform('PYGGEL_Transformation', 1, False, obj.render_matrix.gl_args)
+            self.shader.uniform('PYGGEL_LocalTransformation', 1, False, obj.transform_matrix.gl_args)
             obj.mesh.render()
 
-        if tObjs:
-            for obj in tObjs:
-                # self.shader.uniform('PYGGEL_Transformation', 1, False, obj.render_matrix.representation)
-                self.shader.uniform('PYGGEL_Transformation', 1, False, value_ptr(obj.render_matrix))
-                # self.shader.uniform('PYGGEL_LocalTransformation', 1, False, obj.transform_matrix.representation)
-                self.shader.uniform('PYGGEL_LocalTransformation', 1, False, value_ptr(obj.transform_matrix))
+        if t_objs:
+            for obj in t_objs:
+                self.shader.uniform('PYGGEL_Transformation', 1, False, obj.render_matrix.gl_args)
+                self.shader.uniform('PYGGEL_LocalTransformation', 1, False, obj.transform_matrix.gl_args)
                 obj.mesh.render()

@@ -8,11 +8,11 @@ import numpy
 class Texture(object):
     def __init__(self, texture_id=None, repeat=False):
 
-        self.textureId = texture_id or Texture.gen_texture_id()
+        self.texture_id = texture_id or Texture.gen_texture_id()
         self.repeat = repeat
 
     def bind(self):
-        glBindTexture(GL_TEXTURE_2D, self.textureId)
+        glBindTexture(GL_TEXTURE_2D, self.texture_id)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         if self.repeat:
@@ -29,12 +29,12 @@ class Texture(object):
         # todo need a system to handle non-power-of-2 textures
 
         image = Image.open(filename)
-        imageData = numpy.array(list(image.getdata()), numpy.uint8)
+        image_data = numpy.array(list(image.getdata()), numpy.uint8)
 
         _id = Texture.gen_texture_id()
         glBindTexture(GL_TEXTURE_2D, _id)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.size[0], image.size[1],
-                     0, GL_RGB, GL_UNSIGNED_BYTE, imageData)
+                     0, GL_RGB, GL_UNSIGNED_BYTE, image_data)
 
         image.close()
         return Texture(_id, repeat)
