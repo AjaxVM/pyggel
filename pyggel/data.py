@@ -4,6 +4,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import numpy
 
+
 class Texture(object):
     def __init__(self, texture_id=None, repeat=False):
 
@@ -25,7 +26,7 @@ class Texture(object):
 
     @staticmethod
     def from_file(filename, repeat=False):
-        #todo need a system to handle non-power-of-2 textures
+        # todo need a system to handle non-power-of-2 textures
 
         image = Image.open(filename)
         imageData = numpy.array(list(image.getdata()), numpy.uint8)
@@ -33,7 +34,7 @@ class Texture(object):
         _id = Texture.gen_texture_id()
         glBindTexture(GL_TEXTURE_2D, _id)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.size[0], image.size[1],
-         0, GL_RGB, GL_UNSIGNED_BYTE, imageData)
+                     0, GL_RGB, GL_UNSIGNED_BYTE, imageData)
 
         image.close()
         return Texture(_id, repeat)

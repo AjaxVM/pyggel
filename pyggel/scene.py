@@ -1,6 +1,7 @@
 
 from .math3d import Vec3, Mat4
 
+
 class Node(object):
     # node_type flags if this is a special node that we want collected into a flat list in scene
     node_type = None
@@ -12,13 +13,14 @@ class Node(object):
         self._children = []
 
         self._transform_matrix = None
-        self._view_matrix = None # this should be none if not a Scene
-        self._scene_matrix = None # view_matrix * matrix
+        self._view_matrix = None  # this should be none if not a Scene
+        self._scene_matrix = None  # view_matrix * matrix
 
     # parent/child/root properties and functions
     @property
     def parent(self):
         return self._parent
+
     @parent.setter
     def parent(self, parent):
         if self._parent:
@@ -35,6 +37,7 @@ class Node(object):
     @property
     def root(self):
         return self._root
+
     @root.setter
     def root(self, root):
         if self._root and self._root != self:
@@ -116,7 +119,8 @@ class Node(object):
             self._root._remove_node_from_flat(self)
 
     def get_render_position(self):
-        return Vec3(0,0,0) * self._scene_matrix
+        return Vec3(0, 0, 0) * self._scene_matrix
+
 
 class Scene(Node):
     def __init__(self, view=None, camera=None):
@@ -145,7 +149,7 @@ class Scene(Node):
     def _add_node_to_flat(self, node):
         nt = node.node_type
         if nt:
-            if not nt in self.flat_nodes:
+            if nt not in self.flat_nodes:
                 self.flat_nodes[nt] = []
             self.flat_nodes[nt].append(node)
 
@@ -166,6 +170,7 @@ class Scene(Node):
         for child in self._children:
             child.update()
 
+
 class TransformNode(Node):
     def __init__(self, position=None, rotation=None, scale=None, parent=None):
         super(TransformNode, self).__init__(parent)
@@ -181,9 +186,11 @@ class TransformNode(Node):
     def get_local_matrix(self):
         return Mat4.from_transform(self.position, self.rotation, self.scale)
 
+
 class BillboardTransformNode(TransformNode):
     def __init__(self, position=None, rotation=None, scale=None, parent=None):
-        super(BillboardTransformNode, self).__init__(position, rotation, scale, parent)
+        super(BillboardTransformNode, self).__init__(
+            position, rotation, scale, parent)
 
     def get_local_matrix(self):
         rot = self.rotation
@@ -191,14 +198,17 @@ class BillboardTransformNode(TransformNode):
             rot = rot - self.root.camera.rotation
         return Mat4.from_transform(self.position, rot, self.scale)
 
+
 class RenderNode(Node):
     def __init__(self, mesh, parent=None, transparent=False):
         # flag which type of renderable object we have so it can be handled properly
-        self.node_type = 'render_%s'%('transparent' if transparent else 'opaque')
+        self.node_type = 'render_%s' % (
+            'transparent' if transparent else 'opaque')
         super(RenderNode, self).__init__(parent)
 
         self.mesh = mesh
         self.transparent = transparent
+
 
 class LightNode(Node):
     node_type = 'light'

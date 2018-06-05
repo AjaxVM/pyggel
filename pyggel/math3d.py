@@ -3,6 +3,7 @@ import math
 
 import numpy
 
+
 class Vec3(object):
     def __init__(self, *args):
         if len(args) == 0:
@@ -60,7 +61,7 @@ class Vec3(object):
     # standard math operations
     def __add__(self, other):
         other = Vec3.cast(other)
-        return Vec3(self.x + other.x, self.y+other.y, self.z+other.z)
+        return Vec3(self.x + other.x, self.y + other.y, self.z + other.z)
 
     def __iadd__(self, other):
         other = Vec3.cast(other)
@@ -111,7 +112,7 @@ class Vec3(object):
         return Vec3(self.x / other.x, self.y / other.y, self.z / other.z)
 
     def __itruediv__(self, other):
-        other = Vec.cast(other)
+        other = Vec3.cast(other)
         self.x /= other.x
         self.y /= other.y
         self.z /= other.z
@@ -129,7 +130,7 @@ class Vec3(object):
         return Vec3(self.x * -1, self.y * -1, self.z * -1)
 
     def __str__(self):
-        return "Vec3 (x%6.2f, y%6.2f, z%6.2f)"%(self.x, self.y, self.z)
+        return "Vec3 (x%6.2f, y%6.2f, z%6.2f)" % (self.x, self.y, self.z)
 
     # helpers
     def __iter__(self):
@@ -144,6 +145,7 @@ class Vec3(object):
 # todo this needs to be more fleshed out
 # and should probably be like a subclass of numpy.array or something
 # so we can pass it to uniform
+
 
 class Mat4(object):
     def __init__(self, representation):
@@ -186,9 +188,9 @@ class Mat4(object):
 
         self.representation = numpy.matmul(self.representation, numpy.array(
             (
-                (yc*zc, zs, -ys, 0),
-                (-zs, xc*zc, xs, 0),
-                (ys, -xs, xc*yc, 0),
+                (yc * zc, zs, -ys, 0),
+                (-zs, xc * zc, xs, 0),
+                (ys, -xs, xc * yc, 0),
                 (0, 0, 0, 1)
             ),
             'f'
@@ -203,9 +205,12 @@ class Mat4(object):
         self.representation = numpy.matmul(self.representation, numpy.array(
             (
                 # (1 if axis == 'x' else c, s if axis == 'z' else 0, -s if axis == 'y' else 0, 0),
-                ((c, 1)[axis=='x'], (0, s)[axis=='z'], (0, -s)[axis=='y'], 0),
-                ((0, -s)[axis=='z'], (c, 1)[axis=='y'], (0, s)[axis=='x'], 0),
-                ((0, s)[axis=='y'], (0, -s)[axis=='x'], (c, 1)[axis=='z'], 0),
+                ((c, 1)[axis == 'x'], (0, s)[
+                 axis == 'z'], (0, -s)[axis == 'y'], 0),
+                ((0, -s)[axis == 'z'], (c, 1)
+                 [axis == 'y'], (0, s)[axis == 'x'], 0),
+                ((0, s)[axis == 'y'], (0, -s)
+                 [axis == 'x'], (c, 1)[axis == 'z'], 0),
                 (0, 0, 0, 1)
             )
         ))
@@ -217,7 +222,8 @@ class Mat4(object):
         return Mat4(numpy.matmul(self.representation, other.representation))
 
     def __imul__(self, other):
-        self.representation = numpy.matmul(self.representation, other.representation)
+        self.representation = numpy.matmul(
+            self.representation, other.representation)
         return self
 
     # builders
@@ -242,9 +248,9 @@ class Mat4(object):
 
         return Mat4(numpy.array(
             (
-                (yc*zc*scale.x, zs*scale.x, -ys*scale.x, position.x),
-                (-zs*scale.y, xc*zc*scale.y, xs*scale.y, position.y),
-                (ys*scale.z, -xs*scale.z, xc*yc*scale.z, position.z),
+                (yc * zc * scale.x, zs * scale.x, -ys * scale.x, position.x),
+                (-zs * scale.y, xc * zc * scale.y, xs * scale.y, position.y),
+                (ys * scale.z, -xs * scale.z, xc * yc * scale.z, position.z),
                 (0, 0, 0, 1)
             ),
             'f'

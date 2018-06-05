@@ -8,6 +8,7 @@ from ctypes import c_void_p, sizeof, c_float
 
 from .utils import calculate_normals_for_mesh
 
+
 class Mesh(object):
     data_definition = {
         'vertices': {
@@ -43,7 +44,8 @@ class Mesh(object):
 
     def __init__(self, vertices, normals=None, texture_coords=None, colors=None, specular_power=None, texture=None, indices=None):
         # TODO: can we make this initialize smarter???
-        self.initialize_values(vertices, normals, texture_coords, colors, specular_power, texture, indices)
+        self.initialize_values(
+            vertices, normals, texture_coords, colors, specular_power, texture, indices)
         self.build_arrays()
 
     def initialize_values(self, vertices=None, normals=None, texture_coords=None, colors=None, specular_power=None, texture=None, indices=None):
@@ -62,11 +64,13 @@ class Mesh(object):
         if 'normals' in self.data_definition:
             self.normals = self.default(normals, 'normals')
         if 'texture_coords' in self.data_definition:
-            self.texture_coords = self.default(texture_coords, 'texture_coords')
+            self.texture_coords = self.default(
+                texture_coords, 'texture_coords')
         if 'colors' in self.data_definition:
             self.colors = self.default(colors, 'colors')
         if 'specular_power' in self.data_definition:
-            self.specular_power = self.default(specular_power, 'specular_power')
+            self.specular_power = self.default(
+                specular_power, 'specular_power')
 
         self.texture = texture
 
@@ -78,23 +82,24 @@ class Mesh(object):
             return [ddef['defaultValue']] * len(self.vertices)
         if 'defaultFunc' in ddef:
             return ddef['defaultFunc'](self)
-        raise AttributeError('Cannot default value for param "%s"'%_type)
+        raise AttributeError('Cannot default value for param "%s"' % _type)
 
     def build_arrays(self):
         # calculate stride and pointer offsets
-        data_stride = 0 # how many values packed into a row
-        next_offset = 0 # offset for next set of value in row
-        data_defs = [] # list of (index, num_components, offset)
+        data_stride = 0  # how many values packed into a row
+        next_offset = 0  # offset for next set of value in row
+        data_defs = []  # list of (index, num_components, offset)
         for name in self.data_definition:
             if getattr(self, name):
                 attrib = self.data_definition[name]
                 data_stride += attrib['num_components']
-                data_defs.append((attrib['index'], attrib['num_components'], next_offset))
+                data_defs.append(
+                    (attrib['index'], attrib['num_components'], next_offset))
                 next_offset += attrib['num_components']
 
         # store in case we need to reference our definitions
         self.data_defs = data_defs
-        
+
         # build data array
         vert_count = len(self.vertices)
         data = []
@@ -107,7 +112,8 @@ class Mesh(object):
 
         # build vbos
         self.data_buffer = vbo.VBO(self.data_array)
-        self.index_buffer = vbo.VBO(self.index_array, target=GL_ELEMENT_ARRAY_BUFFER)
+        self.index_buffer = vbo.VBO(
+            self.index_array, target=GL_ELEMENT_ARRAY_BUFFER)
         self.vao = glGenVertexArrays(1)
 
         # set data format
@@ -115,7 +121,8 @@ class Mesh(object):
         self.data_buffer.bind()
         for data in data_defs:
             glEnableVertexAttribArray(data[0])
-            glVertexAttribPointer(data[0], data[1], self.data_gl_type, False, data_stride * self.data_size, c_void_p(data[2] * self.data_size))
+            glVertexAttribPointer(data[0], data[1], self.data_gl_type, False,
+                                  data_stride * self.data_size, c_void_p(data[2] * self.data_size))
         self.data_buffer.unbind()
         glBindVertexArray(0)
 
@@ -126,7 +133,8 @@ class Mesh(object):
         self.data_buffer.bind()
         if self.texture:
             self.texture.bind()
-        glDrawElements(self.render_primitive, len(self.indices), GL_UNSIGNED_INT, None)
+        glDrawElements(self.render_primitive, len(
+            self.indices), GL_UNSIGNED_INT, None)
         self.data_buffer.unbind()
         self.index_buffer.unbind()
         glBindVertexArray(0)

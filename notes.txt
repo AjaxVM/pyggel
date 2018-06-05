@@ -139,3 +139,6 @@ Rotation is messed up when doing more than one axis... for camera at least... wt
 Also, z rotation for camera appears wrong - everything is warping (with what I assume is the screen width being wider than tall?)
 
 Consider adding a billboard shader as well as supporting the billboard transform node for batched rendering (like particles and such)
+
+remember to run autopep8 with:
+    autopep8 -air pyggel

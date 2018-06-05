@@ -2,6 +2,7 @@
 from OpenGL.GL import *
 from OpenGL.GL import shaders
 
+
 class Shader(object):
     __bound_shader = None
 
@@ -36,14 +37,14 @@ class Shader(object):
         self.__bound_shader = self
 
     def unbind(self):
-        #note: this should not be done unless needed
+        # note: this should not be done unless needed
         # took fps from ~1000 to ~900 when rendering two objects and binding/unbinding each render
         shaders.glUseProgram(0)
 
     def uniform(self, name, *args):
         # TODO: cache what values were last set so we don't reset when the same
         if not (self._uniform_map and name in self._uniform_map):
-            raise AttributeError("Invalid uniform %s"%name)
+            raise AttributeError("Invalid uniform %s" % name)
         self._uniform_funcs[name](self._uniform_map[name], *args)
 
     # TODO: some helpers to pass variables to shader without needing to define the uniform func

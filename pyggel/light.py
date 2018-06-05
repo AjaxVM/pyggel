@@ -13,11 +13,13 @@ class Light(object):
         shader.uniform(self.shader_params['color'], *self.color)
         shader.uniform(self.shader_params['intensity'], self.intensity)
 
+
 class AmbientLight(Light):
     shader_params = {
         'color': 'PYGGEL_AmbientLight.color',
         'intensity': 'PYGGEL_AmbientLight.intensity'
     }
+
 
 class DirectionalLight(Light):
     shader_params = {
@@ -36,10 +38,13 @@ class DirectionalLight(Light):
     def bind(self, shader):
         super(DirectionalLight, self).bind(shader)
         shader.uniform(self.shader_params['normal'], *self.normal)
-        shader.uniform(self.shader_params['specular_power'], self.specular_power)
+        shader.uniform(
+            self.shader_params['specular_power'], self.specular_power)
+
 
 # TODO: implement max active
 MAX_POINT_LIGHTS = 4
+
 
 class PointLight(Light):
 
@@ -62,7 +67,7 @@ class PointLight(Light):
         self.specular_power = specular_power
         self.attenuation_params = attenuation_params
 
-        self._current_id = -1 # not bound
+        self._current_id = -1  # not bound
 
     def bind(self, shader):
         # if self in self._bound_lights:
@@ -70,20 +75,28 @@ class PointLight(Light):
         # TODO: this needs to be smarter... - possibly an attribute of shader derived from getting the value or something?
         # or it is a uniform set by shader, I dunno
         if self not in self._bound_lights and len(self._bound_lights) > MAX_POINT_LIGHTS:
-            raise Exception('Too many point lights active - max %s'%MAX_POINT_LIGHTS)
+            raise Exception(
+                'Too many point lights active - max %s' % MAX_POINT_LIGHTS)
 
-        if not self in self._bound_lights:
+        if self not in self._bound_lights:
             self._bound_lights.append(self)
             self._current_id = -1
         if self._current_id == -1:
             self._current_id = self._get_id()
-        shader.uniform(self.shader_params['color']%self._current_id, *self.color)
-        shader.uniform(self.shader_params['intensity']%self._current_id, self.intensity)
-        shader.uniform(self.shader_params['position']%self._current_id, *self.position)
-        shader.uniform(self.shader_params['specular_power']%self._current_id, self.specular_power)
-        shader.uniform(self.shader_params['attenuation_constant']%self._current_id, self.attenuation_params[0])
-        shader.uniform(self.shader_params['attenuation_linear']%self._current_id, self.attenuation_params[1])
-        shader.uniform(self.shader_params['attenuation_exponent']%self._current_id, self.attenuation_params[2])
+        shader.uniform(self.shader_params['color'] %
+                       self._current_id, *self.color)
+        shader.uniform(self.shader_params['intensity'] %
+                       self._current_id, self.intensity)
+        shader.uniform(self.shader_params['position'] %
+                       self._current_id, *self.position)
+        shader.uniform(self.shader_params['specular_power'] %
+                       self._current_id, self.specular_power)
+        shader.uniform(self.shader_params['attenuation_constant'] %
+                       self._current_id, self.attenuation_params[0])
+        shader.uniform(self.shader_params['attenuation_linear'] %
+                       self._current_id, self.attenuation_params[1])
+        shader.uniform(self.shader_params['attenuation_exponent'] %
+                       self._current_id, self.attenuation_params[2])
 
     def unbind(self):
         if self in self._bound_lights:
@@ -98,5 +111,5 @@ class PointLight(Light):
             if _id not in used:
                 return _id
 
-        raise Exception('Cannot get id for point light - too many bound - max %s'%MAX_POINT_LIGHTS)
-
+        raise Exception(
+            'Cannot get id for point light - too many bound - max %s' % MAX_POINT_LIGHTS)
