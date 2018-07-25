@@ -22,34 +22,18 @@ On tie (perhaps with threshold) elect to use closest light
 This is simple alternative to deferred lighting perhaps?
 
 
-Make sure to flag dependencies for our lib so we can add it to pip and have it work properly
 
-Try again to use non-indexed writes and see how much faster it is
-Add function to unwrap a mesh so that indexes are linear (0,1,2...N) and duplicate verts as necessary to allow this
-Make normal calculation function take vertices/indices as arguments (indices being optional)
 
-Can we simply specify stride of VBO data and unpack in shader maybe?
 
-Check if setting the data format (stride/offset, etc.) at build time is sufficient or causes issues...
-    It is waaaay faster if it is not something that has to be updated all the time
 
-Consider using Pyrr for math
-    Seems to be a no go, timeit shows our Vec3 being considerably faster than Pyrr's (possibly due to not putting everything into numpy?)
-    for instantiation and dot product against self
 
-    PyGLM, on the other hand, appears to run considerably faster - so might be worth converting to use it
-    Or maybe, make it an optional enhancement where things use it if possible, but fallback to pure python implementation?
-    There is the question about whether we can coerce glm types as args to OpenGL though...
-        https://github.com/Zuzu-Typ/PyGLM/issues/1
-    It would be cool to use the built in perspective and such matrices instead of building them...
 
-    Interestingly - PyGLM converting vector was actualyl slower - might need to tweak interface to be more glm friendly?
-    A task for another day though
+
 
 Maybe define render passes that have attributes like, whether they affect transparent/not, whether they are lit, etc.
 And, they have a shader attached, instead of passing a shader around everywhere
 
-We need a lot of optimizations about pre_render, shader values, etc.
+
 
 Implement simple HDR with exposure mapping: https://learnopengl.com/Advanced-Lighting/HDR
 
