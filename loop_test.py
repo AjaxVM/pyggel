@@ -1,6 +1,5 @@
 
 
-import asyncio
 from pyggel import event_loop
 
 class MyHandler(event_loop.handler.Handler):
