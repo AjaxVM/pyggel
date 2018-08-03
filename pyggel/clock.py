@@ -122,22 +122,27 @@ class FpsClock(TrackingClock):
         # we define tick_limit so it can be used to limit fps
         target = self._calc_tick_wait()
         if target:
-            # self.sleep(target - self.time())
-            while self.time() + self.tick_resolution < target:
-                self.sleep(self.tick_resolution)
+            if self.tick_resolution:
+                while self.time() + self.tick_resolution < target:
+                    self.sleep(self.tick_resolution)
+            else:
+                self.sleep(target - self.time())
 
     async def tick_limit_async(self):
         target = self._calc_tick_wait()
-        _slept = False
         if target:
-            while self.time() + self.tick_resolution_async < target:
-                await self.sleep_async(self.tick_resolution_async)
+            if self.tick_resolution_async:
+                _slept = False
+                while self.time() + self.tick_resolution_async < target:
+                    await self.sleep_async(self.tick_resolution_async)
+                    if not _slept:
+                        _slept = True
                 if not _slept:
-                    _slept = True
-        
-        if not _slept:
-            # make sure we actually sleep at least 0 to adhere to switching
-            # expectation
+                    # we are expected to yield to other coroutines during this, even if we want to run asap
+                    await self.sleep_async(0)
+            else:
+                await self.sleep_async(target - self.time())
+        else:
             await self.sleep_async(0)
 
     def fps(self):

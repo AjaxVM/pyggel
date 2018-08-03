@@ -12,7 +12,8 @@ class MyHandler(event_loop.Handler):
 
 def main():
     # c = clock.FpsClock(max_fps=100, max_deltas=1000)
-    c = clock.PreciseFpsClock(max_fps=100, max_deltas=1000)
+    c = clock.FpsClock(max_fps=100, max_deltas=1000, tick_resolution_async=0.6)
+    # c = clock.PreciseFpsClock(max_fps=100, max_deltas=1000)
     # loop = event_loop.Loop(limit_fps=100, clock=c)
     loop = event_loop.AsyncLoop(limit_fps=100, clock=c)
 
