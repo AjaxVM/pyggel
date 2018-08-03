@@ -1,5 +1,6 @@
 # flake8: noqa
 from . import (
+    clock,
     data,
     event_loop,
     light,

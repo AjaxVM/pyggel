@@ -1,42 +1,26 @@
 
 
-from pyggel import event_loop
+import sys, time
+from pyggel import event_loop, clock
 
-class MyHandler(event_loop.handler.Handler):
+class MyHandler(event_loop.Handler):
     def __init__(self):
         super().__init__()
-        self.evt = event_loop.event_tracker.EventTracker(self)
 
-    def tick(self):
-        if self.evt.schedule_once(event_loop.event.Event('laugh'), 1):
-            print('snicker')
-
-        self.evt.schedule_once(event_loop.event.Event('random'), 0.3)
-
-    @event_loop.handler.register('laugh')
-    def do_something(self, event):
-        print('hahaha')
-        self.evt.schedule_once(event_loop.event.Event('cough'), 2)
-
-
-def handle_cough(event, loop):
-    print('cough')
-    loop.schedule(event_loop.event.Event('wheeze'), 0.5)
-
-def handle_wheeze(event):
-    print(event.type)
-
-def handle_random():
-    print('woah.... dude')
+    def tick(self, delta):
+        sys.stdout.write('\rfps: %s '%int(round(self.loop.clock.fps())))
 
 def main():
-    loop = event_loop.loop.SimpleLoop()
-    # loop = event_loop.loop.AsyncLoop()
-    handler = MyHandler()
-    handler.register('cough', handle_cough)
-    handler.register('wheeze', handle_wheeze)
-    handler.register('random', handle_random)
-    loop.add_handler(handler)
-    loop.start()
+    # c = clock.FpsClock(max_fps=100, max_deltas=1000)
+    c = clock.PreciseFpsClock(max_fps=100, max_deltas=1000)
+    # loop = event_loop.Loop(limit_fps=100, clock=c)
+    loop = event_loop.AsyncLoop(limit_fps=100, clock=c)
+
+    loop.add_handler(MyHandler())
+
+    # loop.clock.track_deltas = True
+    # loop.clock.max_deltas = 100
+
+    loop.run()
 
 main()
