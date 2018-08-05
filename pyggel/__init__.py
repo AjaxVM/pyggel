@@ -2,7 +2,7 @@
 from . import (
     clock,
     data,
-    event_loop,
+    event,
     light,
     math3d,
     mesh,

@@ -97,13 +97,15 @@ class FpsClock(TrackingClock):
         This clock uses time.sleep for limiting fps, which has
         accuracy issues but is good for power conservation
 
-        tick_resolution/tick_resolution_async are used to try to 
+        tick_resolution/tick_resolution_async are used to
+        specify how long to sleep before checking if ready
+        and can allow tweaking to limit inaccuracy
     '''
     def __init__(self,
                  max_fps=None,
                  max_deltas=10,
-                 tick_resolution=0.5,
-                 tick_resolution_async=0.1
+                 tick_resolution=None,
+                 tick_resolution_async=None
                 ):
         super().__init__(max_deltas)
         self.max_fps = max_fps
