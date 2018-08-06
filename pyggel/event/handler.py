@@ -21,6 +21,12 @@ class Handler:
                 for event_type in prop.pyggel_event_handler_registration:
                     self.register(event_type, prop)
 
+    def _trigger_reindex_loop(self):
+        # trigger loop to reindex which events we are tracking
+        # this is to allow discarding events that nothing is watching for
+        if self._loop:
+            self._loop.reindex_events()
+
     @property
     def loop(self):
         return self._loop
@@ -36,6 +42,13 @@ class Handler:
         self._loop = loop
 
     def handle_event(self, event):
+        if event.has_alias:
+            # check if we are handling an alias first (they are more specific)
+            for alias in event.aliases:
+                if alias in self._callbacks:
+                    self._callbacks[alias](event)
+                    return
+        # event has no alias, or we are not handling the alias, check for event_name handler
         if event.name in self._callbacks:
             self._callbacks[event.name](event)
 
@@ -44,10 +57,15 @@ class Handler:
             raise TypeError('Callback already register for event "%s"'%event_name)
 
         self._callbacks[event_name] = callback
+        self._trigger_reindex_loop()
 
     def deregister(self, event_name):
         if event_name in self._callbacks:
             del self._callbacks[event_name]
+            self._trigger_reindex_loop()
+
+    def get_registered(self):
+        return tuple(self._callbacks)
 
     def tick(self, delta):
         pass

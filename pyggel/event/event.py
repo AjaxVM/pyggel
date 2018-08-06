@@ -1,8 +1,11 @@
 
 
 class Event:
-    def __init__(self, name):
+    def __init__(self, name, aliases=None):
         self.name = name
+
+        self.has_alias = bool(aliases)
+        self.aliases = aliases
 
         self._cancelled = False
         self._scheduled = False
@@ -11,6 +14,10 @@ class Event:
 
     def cancel(self):
         self._cancelled = True
+
+    @property
+    def cancelled(self):
+        return self._cancelled
 
     @property
     def handling(self):

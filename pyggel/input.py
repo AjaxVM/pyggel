@@ -5,32 +5,66 @@ from pygame.locals import *
 from .event import event, listener
 
 
-class WindowListener(listener.Listener):
+# TODO: how to wrap pygame.event.set_grab, hiding mouse or keeping it centered?
+
+
+EVENT_MAPPINGS = {
+    'window': (QUIT, ACTIVEEVENT, VIDEORESIZE, VIDEOEXPOSE),
+    'keyboard': (KEYDOWN, KEYUP),
+    'mouse': (MOUSEBUTTONDOWN, MOUSEBUTTONUP),
+    'mouse_motion': (MOUSEMOTION,),
+    'joystick': (JOYAXISMOTION, JOYBALLMOTION, JOYHATMOTION, JOYBUTTONDOWN, JOYBUTTONUP),
+    'user': (USEREVENT,)
+}
+
+
+class InputListener(listener.Listener):
+    '''Listener for events in game window (such as window events (like quit/minimize), keyboard, etc.)'''
+    def __init__(self,
+                 window=True,
+                 keyboard=True,
+                 mouse=True,
+                 mouse_motion=False):
+        super().__init__()
+
+        # TODO: support joy stick and user events?
+
+        # optimize our loop by throwing out events we do not need - especially mouse motion (unless used)
+        accept = []
+        if window:
+            accept.extend(EVENT_MAPPINGS['window'])
+        if keyboard:
+            accept.extend(EVENT_MAPPINGS['keyboard'])
+        if mouse:
+            accept.extend(EVENT_MAPPINGS['mouse'])
+        if mouse_motion:
+            accept.extend(EVENT_MAPPINGS['mousemotion'])
+
+        pygame.event.set_allowed(accept)
+
     def dispatch(self, evt):
         self._loop.dispatch(evt)
 
     def check(self):
-        # todo, only window events
-        # have a keyboard listener for other events
-        # and a mouse handler for those
-        # etc.
-        # can use pygame.event.get(QUIT,ACTIVEEVENT,VIDEORESIZE,VIDEOEXPOSE)
-        # need to figure out how to clear the event queue (so it does not fill)
-        # after all inputs are read... maybe as an event?
-        # the reason for this is for not needing to iterate through all events if we don't need to
-        # just dumping ones we don't care about
         events = pygame.event.get()
         cur_mods = KeyboardMods()
 
         for evt in events:
             if evt.type == QUIT:
                 self.dispatch(WindowEvent('window.quit', evt))
-            if evt.type == KEYDOWN or evt.type == KEYUP:
-                self.dispatch(KeyboardEvent(evt, cur_mods))
-            if evt.type == MOUSEMOTION:
-                # todo
-                pass
-            if evt.type == MOUSEBUTTONDOWN
+            if evt.type == KEYDOWN:
+                self.dispatch(KeyboardEvent('window.key.down', evt, cur_mods))
+            if evt.type == KEYUP:
+                self.dispatch(KeyboardEvent('window.key.up', evt, cur_mods))
+            if evt.type == MOUSEBUTTONDOWN:
+                if evt.button in MouseScrollEvent.BUTTON_MAP:
+                    self.dispatch(MouseScrollEvent('window.mouse.scroll', evt, cur_mods))
+                else:
+                    self.dispatch(MouseButtonEvent('window.mouse.down', evt, cur_mods))
+            if evt.type == MOUSEBUTTONUP:
+                # scrolls generate up and down events, only need one
+                if evt.button not in MouseScrollEvent.BUTTON_MAP:
+                    self.dispatch(MouseButtonEvent('window.mouse.up', evt, cur_mods))
 
 
 class WindowEvent(event.Event):
@@ -54,23 +88,28 @@ class KeyboardEvent(event.Event):
         ' ', # space
     ]
 
-    def __init__(self, pygame_event, mods):
+    def __init__(self, name, pygame_event, mods):
         if pygame_event.type == KEYDOWN:
-            super().__init__('window.key.down')
             char = pygame_event.unicode
             if not pygame_event.type in self.MAPPED_CHARS:
                 self.MAPPED_CHARS[pygame_event.type] = char
         else:
-            super().__init__('window.key.up')
-            # handle edge case where we get a key up before a keydown
+            # handle edge case where we get a keyup before a keydown
             if pygame_event.type in self.MAPPED_CHARS:
                 char = self.MAPPED_CHARS[pygame_event.type]
             else:
                 char = None
+
+        key = self.get_mapped_name(pygame_event)
+
+        # init, with alias
+        # todo: maybe support input mapping (ie: key.a -> move_left) with alias?
+        super().__init__(name, (name+':'+key,))
+
         self.raw = pygame_event
+        self.key = key
         self.mods = mods
 
-        self.key = self.get_mapped_name(pygame_event)
         self.char = char
         self.is_whitespace = char in self.WHITESPACE_CHARACTERS
         self.is_control_char = char in self.CONTROL_CHARACTERS
@@ -78,7 +117,7 @@ class KeyboardEvent(event.Event):
     @staticmethod
     def get_mapped_name(pygame_event):
         if pygame_event.key not in KeyboardEvent.MAPPED_EVENTS:
-            KeyboardEvent.MAPPED_EVENTS[pygame_event.key] = 'key.%s'%pygame.key.name(pygame_event.key).replace(' ', '_')
+            KeyboardEvent.MAPPED_EVENTS[pygame_event.key] = pygame.key.name(pygame_event.key).replace(' ', '_')
 
         return KeyboardEvent.MAPPED_EVENTS[pygame_event.key]
 
@@ -146,4 +185,44 @@ class KeyboardMods:
     @property
     def mode(self):
         return bool(self._mods & KMOD_MODE)
+
+
+class MouseButtonEvent(event.Event):
+    BUTTON_MAP = {
+        1: 'left',
+        2: 'middle',
+        3: 'right'
+    }
+
+    def __init__(self, name, pygame_event, mods):
+        if pygame_event.button in self.BUTTON_MAP:
+            button = self.BUTTON_MAP[pygame_event.button]
+        else:
+            button = 'button_'+str(pygame_event.button)
+        super().__init__(name, (name+':'+button,))
+
+        self.raw = pygame_event
+        self.button = button
+        self.mods = mods
+        self.x, self.y = pygame_event.pos
+
+
+class MouseScrollEvent(event.Event):
+    BUTTON_MAP = {
+        4: 'up',
+        5: 'down'
+    }
+
+    def __init__(self, name, pygame_event, mods):
+        if pygame_event.button not in self.BUTTON_MAP:
+            raise TypeError('Invalid input even')
+
+        direction = self.BUTTON_MAP[pygame_event.button]
+        super().__init__(name, (name+':'+direction,))
+
+        self.raw = pygame_event
+        self.direction = direction
+        self.value = -1 if direction == 'up' else 1
+        self.mods = mods
+        self.x, self.y = pygame_event.pos
 

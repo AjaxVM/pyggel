@@ -20,6 +20,8 @@ class Loop:
         self._immediate_events = Queue()
         self._handling_event = False
 
+        self._event_index = set() # events we are currently tracking
+
         if handlers:
             self.add_handlers(handlers)
 
@@ -75,6 +77,12 @@ class Loop:
         for event in self._scheduled_events.all():
             self._handle_event(event)
 
+    def reindex_events(self):
+        self._event_index = set()
+        for handler in self._handlers:
+            for event_type in handler.get_registered():
+                self._event_index.add(event_type)
+
     def prioritize_handlers(self):
         # sort list of handlers by negative priority, so highest is processed first
         self._handlers.sort(key=lambda handler: -handler._priority)
@@ -82,15 +90,18 @@ class Loop:
     def add_handler(self, handler):
         handler.set_loop(self)
         self._handlers.append(handler)
+        self.reindex_events()
         self.prioritize_handlers()
 
     def remove_handler(self, handler):
         self._handlers.remove(handler)
+        self.reindex_events()
 
     def add_handlers(self, handlers):
         for handler in handlers:
             handler.set_loop(self)
             self._handlers.append(handler)
+        self.reindex_events()
         self.prioritize_handlers()
 
     def add_listener(self, listener):
@@ -105,6 +116,8 @@ class Loop:
             self.add_listener(listener)
 
     def dispatch(self, event, delay=0):
+        if not event.name in self._event_index:
+            return
         if delay:
             event._scheduled = True
             self._scheduled_events.add(event, delay)

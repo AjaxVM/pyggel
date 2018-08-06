@@ -5,7 +5,7 @@ import pygame
 # from pygame.locals import *
 
 from pyggel.event import handler, loop
-from pyggel.input import WindowListener
+from pyggel.input import InputListener
 
 class MyHandler(handler.Handler):
     def __init__(self, screen):
@@ -19,7 +19,7 @@ class MyHandler(handler.Handler):
 
     @handler.register('window.key.down')
     @handler.register('window.key.up')
-    def handle_key_down(self, event):
+    def handle_key(self, event):
         print({
             'name': event.name,
             'key': event.key,
@@ -31,9 +31,31 @@ class MyHandler(handler.Handler):
             'mod_alt': event.mods.alt
         })
 
+    @handler.register('window.mouse.down')
+    @handler.register('window.mouse.up')
+    def handle_mouse(self, event):
+        print({
+            'name': event.name,
+            'button': event.button,
+            'mod_shift': event.mods.shift,
+            'mod_ctrl': event.mods.ctrl,
+            'mod_alt': event.mods.alt
+        })
+
+    @handler.register('window.mouse.scroll')
+    def handle_scroll(self, event):
+        print({
+            'name': event.name,
+            'direction': event.direction,
+            'scroll_value': event.value,
+            'mod_shift': event.mods.shift,
+            'mod_ctrl': event.mods.ctrl,
+            'mod_alt': event.mods.alt
+        })
+
     @handler.register('window.quit')
+    @handler.register('window.key.down:escape')
     def handle_quit(self, event):
-        pygame.quit()
         self.loop.stop()
 
 
@@ -41,14 +63,20 @@ def main():
 
     pygame.init()
 
+    # pygame.event.set_grab(True)
+
     screen = pygame.display.set_mode((640, 480))
 
     my_loop = loop.Loop()
 
-    my_loop.add_handler(MyHandler(screen))
-    my_loop.add_listener(WindowListener())
+    hand = MyHandler(screen)
+
+    my_loop.add_handler(hand)
+    my_loop.add_listener(InputListener())
 
     my_loop.start()
+
+    pygame.quit()
 
 main()
 
