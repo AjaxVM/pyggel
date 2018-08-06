@@ -119,7 +119,7 @@ class Loop:
     def get_delta(self):
         return self._clock.tick()
 
-    def run(self):
+    def start(self):
         if self._running:
             raise Exception('Already running')
 
@@ -157,7 +157,7 @@ class AsyncLoop(Loop):
             else:
                 await self._clock.sleep_async(0)
 
-    def run(self):
+    def start(self):
         if self._running:
             raise Exception('Already running')
 
