@@ -9,13 +9,16 @@ from .event import event, listener
 
 
 EVENT_MAPPINGS = {
-    'window': (QUIT, ACTIVEEVENT, VIDEORESIZE, VIDEOEXPOSE),
+    'window': (QUIT, ACTIVEEVENT),
+    'window_resize': (VIDEORESIZE,),
     'keyboard': (KEYDOWN, KEYUP),
     'mouse': (MOUSEBUTTONDOWN, MOUSEBUTTONUP),
     'mouse_motion': (MOUSEMOTION,),
     'joystick': (JOYAXISMOTION, JOYBALLMOTION, JOYHATMOTION, JOYBUTTONDOWN, JOYBUTTONUP),
-    'user': (USEREVENT,)
 }
+# we do not use the following pygame events at this time:
+# USEREVENT - since we have our own event systm
+# VIDEOEXPOSE - since we are always redrawing the entire screen
 
 
 class InputListener(listener.Listener):
@@ -51,21 +54,23 @@ class InputListener(listener.Listener):
         cur_mods = KeyboardMods()
 
         for evt in events:
-            if evt.type == QUIT:
-                yield WindowEvent('window.quit', evt)
+            if evt.type == QUIT or evt.type == ACTIVEEVENT:
+                # Window events are responsible for picking name based on pygame event
+                # since the rules are pretty branching
+                yield WindowEvent(evt)
             if evt.type == KEYDOWN:
-                yield KeyboardEvent('window.key.down', evt, cur_mods)
+                yield KeyboardEvent('input.key.down', evt, cur_mods)
             if evt.type == KEYUP:
-                yield KeyboardEvent('window.key.up', evt, cur_mods)
+                yield KeyboardEvent('input.key.up', evt, cur_mods)
             if evt.type == MOUSEBUTTONDOWN:
                 if evt.button in MouseScrollEvent.BUTTON_MAP:
-                    yield MouseScrollEvent('window.mouse.scroll', evt, cur_mods)
+                    yield MouseScrollEvent('input.mouse.scroll', evt, cur_mods)
                 else:
-                    yield MouseButtonEvent('window.mouse.down', evt, cur_mods)
+                    yield MouseButtonEvent('input.mouse.down', evt, cur_mods)
             if evt.type == MOUSEBUTTONUP:
                 # scrolls generate up and down events, only need one
                 if evt.button not in MouseScrollEvent.BUTTON_MAP:
-                    yield MouseButtonEvent('window.mouse.up', evt, cur_mods)
+                    yield MouseButtonEvent('input.mouse.up', evt, cur_mods)
 
     def dispatch(self, evt):
         self._loop.dispatch(evt)
@@ -76,9 +81,41 @@ class InputListener(listener.Listener):
 
 
 class WindowEvent(event.Event):
-    def __init__(self, name, raw):
-        super().__init__(name)
-        self.raw = raw
+    def __init__(self, pygame_event):
+        name = 'window'
+        if pygame_event.type == QUIT:
+            aliases = ('window:close',)
+            action = 'close'
+        elif pygame_event.type == ACTIVEEVENT:
+            state = pygame_event.state
+            gain = pygame_event.gain
+
+            if state == 1 and gain == 0:
+                aliases = ('window:mouse_out',)
+                action = 'mouse_out'
+            elif state == 1 and gain == 1:
+                aliases = ('window:mouse_in',)
+                action = 'mouse_in'
+            elif state == 2 and gain == 0:
+                aliases = ('window:lost_focus',)
+                action = 'lost_focus'
+            elif state == 2 and gain == 1:
+                # NOTE: I could never get this one to fire - since window.active seemed to handle it
+                aliases = ('window:gained_focus',)
+                action = 'gained_focus'
+            elif state == 6 and gain == 0:
+                # treat this as focus lost because effectively they are the same
+                aliases = ('window:minimized','window:lost_focus')
+                action = 'minimized'
+            elif state == 6 and gain == 1:
+                # treat this as focus gained as well, since they go hand-in-hand
+                aliases = ('window:restored','window:focus.gained')
+                action = 'restored'
+        # TODO: handle resizes here too?
+
+        super().__init__(name, aliases)
+        self.raw = pygame_event
+        self.action = action
 
 
 class KeyboardEvent(event.Event):

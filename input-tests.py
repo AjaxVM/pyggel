@@ -14,49 +14,53 @@ class MyHandler(handler.Handler):
         self.screen = screen
 
     def tick(self, delta):
-        pygame.display.set_caption('%s'%delta)
+        # pygame.display.set_caption('%s'%delta)
         pygame.display.flip()
 
-    @handler.register('window.key.down')
-    @handler.register('window.key.up')
-    def handle_key(self, event):
-        print({
-            'name': event.name,
-            'key': event.key,
-            'char': event.char,
-            'whitespace': event.is_whitespace,
-            'control': event.is_control_char,
-            'mod_shift': event.mods.shift,
-            'mod_ctrl': event.mods.ctrl,
-            'mod_alt': event.mods.alt
-        })
+    # @handler.register('input.key.down')
+    # @handler.register('input.key.up')
+    # def handle_key(self, event):
+    #     print({
+    #         'name': event.name,
+    #         'key': event.key,
+    #         'char': event.char,
+    #         'whitespace': event.is_whitespace,
+    #         'control': event.is_control_char,
+    #         'mod_shift': event.mods.shift,
+    #         'mod_ctrl': event.mods.ctrl,
+    #         'mod_alt': event.mods.alt
+    #     })
 
-    @handler.register('window.mouse.down')
-    @handler.register('window.mouse.up')
-    def handle_mouse(self, event):
-        print({
-            'name': event.name,
-            'button': event.button,
-            'mod_shift': event.mods.shift,
-            'mod_ctrl': event.mods.ctrl,
-            'mod_alt': event.mods.alt
-        })
+    # @handler.register('input.mouse.down')
+    # @handler.register('input.mouse.up')
+    # def handle_mouse(self, event):
+    #     print({
+    #         'name': event.name,
+    #         'button': event.button,
+    #         'mod_shift': event.mods.shift,
+    #         'mod_ctrl': event.mods.ctrl,
+    #         'mod_alt': event.mods.alt
+    #     })
 
-    @handler.register('window.mouse.scroll')
-    def handle_scroll(self, event):
-        print({
-            'name': event.name,
-            'direction': event.direction,
-            'scroll_value': event.value,
-            'mod_shift': event.mods.shift,
-            'mod_ctrl': event.mods.ctrl,
-            'mod_alt': event.mods.alt
-        })
+    # @handler.register('input.mouse.scroll')
+    # def handle_scroll(self, event):
+    #     print({
+    #         'name': event.name,
+    #         'direction': event.direction,
+    #         'scroll_value': event.value,
+    #         'mod_shift': event.mods.shift,
+    #         'mod_ctrl': event.mods.ctrl,
+    #         'mod_alt': event.mods.alt
+    #     })
 
-    @handler.register('window.quit')
-    @handler.register('window.key.down:escape')
+    @handler.register('window:close')
+    @handler.register('input.key.down:escape')
     def handle_quit(self, event):
         self.loop.stop()
+
+    @handler.register('window')
+    def handle_window(self, event):
+        print(event.action)
 
 
 def main():
@@ -65,7 +69,7 @@ def main():
 
     # pygame.event.set_grab(True)
 
-    screen = pygame.display.set_mode((640, 480))
+    screen = pygame.display.set_mode((640, 480), pygame.RESIZABLE)
 
     my_loop = loop.Loop()
 
