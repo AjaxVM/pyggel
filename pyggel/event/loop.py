@@ -115,9 +115,20 @@ class Loop:
         for listener in listeners:
             self.add_listener(listener)
 
+    def event_registered(self, event):
+        if event.name in self._event_index:
+            return True
+        if event.has_alias:
+            for alias in event.aliases:
+                if alias in self._event_index:
+                    return True
+        return False
+
     def dispatch(self, event, delay=0):
-        if not event.name in self._event_index:
+        # check if we are handling this event
+        if not self.event_registered(event):
             return
+
         if delay:
             event._scheduled = True
             self._scheduled_events.add(event, delay)

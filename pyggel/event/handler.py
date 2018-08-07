@@ -6,6 +6,8 @@ class Handler:
         If subclassed, will automatically register any @register
             decorated methods
         NOTE: only one function can be registered for any given event
+
+        higher "priority" causes handler to receive events first
     '''
     def __init__(self, priority=0):
         self._priority = priority

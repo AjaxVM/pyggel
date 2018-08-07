@@ -19,7 +19,11 @@ EVENT_MAPPINGS = {
 
 
 class InputListener(listener.Listener):
-    '''Listener for events in game window (such as window events (like quit/minimize), keyboard, etc.)'''
+    '''
+        Listener for events in game window (such as window events (like quit/minimize), keyboard, etc.)
+
+        If not using the pyggel event loop, "get_events" returns an iterator for manual processing
+    '''
     def __init__(self,
                  window=True,
                  keyboard=True,
@@ -42,29 +46,33 @@ class InputListener(listener.Listener):
 
         pygame.event.set_allowed(accept)
 
-    def dispatch(self, evt):
-        self._loop.dispatch(evt)
-
-    def check(self):
+    def get_events(self):
         events = pygame.event.get()
         cur_mods = KeyboardMods()
 
         for evt in events:
             if evt.type == QUIT:
-                self.dispatch(WindowEvent('window.quit', evt))
+                yield WindowEvent('window.quit', evt)
             if evt.type == KEYDOWN:
-                self.dispatch(KeyboardEvent('window.key.down', evt, cur_mods))
+                yield KeyboardEvent('window.key.down', evt, cur_mods)
             if evt.type == KEYUP:
-                self.dispatch(KeyboardEvent('window.key.up', evt, cur_mods))
+                yield KeyboardEvent('window.key.up', evt, cur_mods)
             if evt.type == MOUSEBUTTONDOWN:
                 if evt.button in MouseScrollEvent.BUTTON_MAP:
-                    self.dispatch(MouseScrollEvent('window.mouse.scroll', evt, cur_mods))
+                    yield MouseScrollEvent('window.mouse.scroll', evt, cur_mods)
                 else:
-                    self.dispatch(MouseButtonEvent('window.mouse.down', evt, cur_mods))
+                    yield MouseButtonEvent('window.mouse.down', evt, cur_mods)
             if evt.type == MOUSEBUTTONUP:
                 # scrolls generate up and down events, only need one
                 if evt.button not in MouseScrollEvent.BUTTON_MAP:
-                    self.dispatch(MouseButtonEvent('window.mouse.up', evt, cur_mods))
+                    yield MouseButtonEvent('window.mouse.up', evt, cur_mods)
+
+    def dispatch(self, evt):
+        self._loop.dispatch(evt)
+
+    def check(self):
+        for evt in self.get_events():
+            self.dispatch(evt)
 
 
 class WindowEvent(event.Event):
