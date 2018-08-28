@@ -62,6 +62,10 @@ class MyHandler(handler.Handler):
     def handle_window(self, event):
         print(event.action)
 
+    @handler.register('input.key.down')
+    def test(self, event):
+        print('test', event.key)
+
 
 def main():
 

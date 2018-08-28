@@ -11,58 +11,63 @@ try:
 except:
     HAVE_MSG_PACK = False
 
+from .event import event, listener
 
-class TextPacker:
+
+class TextFormat:
     '''Class for formatting text messages for network communication, and unformatting/streaming data into messages'''
     def __init__(self, delimiter='\r\n'):
         self.delimiter = delimiter
-        self.__buf = ''
-        self._msg_buf = deque()
+        self.raw_buffer = b''
+        self.msg_buffer = deque()
 
-    def pack(self, data):
+    def format(self, data):
         return (data + self.delimiter).encode()
 
-    def unpack(self, data):
-        return data[:-len(self.delimiter)].decode()
+    def unformat(self, data):
+        self._stream_in(data)
+        return self._stream_consume()
 
-    def _unpack_raw(self, data):
-        # this is meant to be used by unpack_feed to decode each message
-        return data.decode()
+    def _decode(self, data):
+        # this is meant to be used by _stream_in to decode each message, if needed
+        return data
 
-    def unpack_feed(self, data):
+    def _stream_in(self, data):
         data = data.decode()
+
+        # short-circuit if we have one, entire message
+        if data.count(self.delimiter) == 1 and data.endswith(self.delimiter) and not self.raw_buffer:
+            self.msg_buffer.append(self._decode(data[:-len(self.delimiter)]))
+            return
 
         if self.delimiter in data:
             messages = data.split(self.delimiter)
-            if self.__buf:
-                messages[0] = self._buf + messages[0]
+            if self.raw_buffer:
+                messages[0] = self.raw_buffer + messages[0]
 
             # if last message was complete this will be empty string, otherwise it is start of next
-            self.__buf = messages.pop()
-            self._msg_buf.extend(self._unpack_raw(message) for message in messages)
+            self.raw_buffer = messages.pop()
+            self.msg_buffer.extend(self._decode(message) for message in messages)
         else:
-            self.__buf += data
+            self.raw_buffer += data
 
-    def unpack_consume(self):
-        for i in range(len(self._msg_buf)):
-            yield self._msg_buf.popleft()
+    def _stream_consume(self):
+        for i in range(len(self.msg_buffer)):
+            yield self.msg_buffer.popleft()
 
 
-class JsonPacker(TextPacker):
+class JsonFormat(TextFormat):
     def __init__(self, delimiter='\n'):
         super().__init__(delimiter)
 
-    def pack(self, data):
-        return super().pack(json.dumps(data))
+    def format(self, data):
+        return super().format(json.dumps(data))
 
-    def unpack(self, data):
-        return json.loads(super().unpack(data))
-
-    def _unpack_raw(self, data):
-        return json.loads(data.decode())
+    def _decode(self, data):
+        return json.loads(data)
 
 
-class MsgpackPacker(TextPacker):
+class MsgpackFormat(TextFormat):
     def __init__(self):
         # we don't need to define a delimiter or buffer, since msgpack handles that
         # but make sure this works
@@ -71,18 +76,86 @@ class MsgpackPacker(TextPacker):
 
         self._unpacker = msgpack.Unpacker(use_list=False, raw=False)
 
-    def pack(self, data):
+    def format(self, data):
         return msgpack.packb(data, use_bin_type=True)
 
-    def unpack(self, data):
-        return msgpack.unpackb(data, use_list=False, raw=False)
+    def _decode(self, data):
+        raise NotImplementedError
 
-    def _unpack_raw(self, data):
-        raise NotImplementedError('MsgpackPacker does not use this method')
-
-    def unpack_feed(self, data):
+    def _stream_in(self, data):
         self._unpacker.feed(data)
 
-    def unpack_consume(self):
+    def _stream_consume(self):
         yield from self._unpacker
 
+
+class Connection(asyncio.Protocol):
+    def __init__(self, listener, formatter=None):
+        self.formatter = formatter or TextFormat()
+        self._listener = listener
+        self._closed = False
+
+        self.id = id(self)
+        self.transport = None
+
+    # event callbacks
+    def connection_made(self, transport):
+        self.transport = transport
+        self.listener.new_connection(self)
+
+    def connection_lost(self, transport):
+        # don't submit lost event if it was closed already
+        if not self._closed:
+            self._closed = True
+            self.listener.lost_connection(self)
+
+    def data_received(self, data):
+        for message in self.formatter.unformat(data):
+            self.listener.message(self, message)
+
+    # actions
+    def close(self):
+        if self._closed:
+            throw Exception('Connection alrady closed')
+        self._closed = True
+        self.transport.write_eof()
+
+    def send(self, message):
+        self.transport.write(self.formatter.format(message))
+
+
+class ConnectionFactory:
+    def __init__(self, listener, *args, **kwargs):
+        self.listener = listener
+        self.args = args
+        self.kwargs = kwargs
+
+    def __call__(self):
+        return Connection(self.listener, *self.args, **self.kwargs)
+
+
+class ConnectionListener(listener.Listener):
+    def __init__(self):
+        super().__init__()
+
+        # if we get a network event, but are not assigned a loop, we will store them in _events
+        # this way the listener can be used without our loop as desired
+        self._events = None
+
+    def _dispatch(self, evt):
+        if self._loop:
+            self._loop.dispatch(evt)
+        else:
+            if not self._events:
+                self._events = deque()
+            self._events.append(evt)
+
+    def check(self):
+        if self._events:
+            for i in range(len(self._events)):
+                yield self._events.popleft()
+
+
+# TODO: what system do we want to use for this?
+# do we want a connect/serve function that returns a listener
+# or what?

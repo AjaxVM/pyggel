@@ -35,6 +35,7 @@ class InputListener(listener.Listener):
         super().__init__()
 
         # TODO: support joy stick and user events?
+        # probably not user events, since we have our own event system...
 
         # optimize our loop by throwing out events we do not need - especially mouse motion (unless used)
         accept = []
@@ -72,12 +73,9 @@ class InputListener(listener.Listener):
                 if evt.button not in MouseScrollEvent.BUTTON_MAP:
                     yield MouseButtonEvent('input.mouse.up', evt, cur_mods)
 
-    def dispatch(self, evt):
-        self._loop.dispatch(evt)
-
     def check(self):
         for evt in self.get_events():
-            self.dispatch(evt)
+            self._loop.dispatch(evt)
 
 
 class WindowEvent(event.Event):
