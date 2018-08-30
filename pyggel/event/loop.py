@@ -150,10 +150,13 @@ class Loop:
         self._running = True
         self._stopping = False
 
-        while self.alive:
-            self._run_once(self.get_delta())
-            if self._clock.tick_limit:
-                self._clock.tick_limit()
+        try:
+            while self.alive:
+                self._run_once(self.get_delta())
+                if self._clock.tick_limit:
+                    self._clock.tick_limit()
+        except KeyboardInterrupt:
+            pass
 
         self._stopping = False
         self._running = False
@@ -167,6 +170,9 @@ class Loop:
         self._stopping = True
 
 
+# TODO: might be better to have this be a custom asyncio loop instead of just sort of linking them
+# Alternatively, since we have our own loop, it might be better to just do the selection style stuff for net
+# and not try to marry our loop to asyncio
 class AsyncLoop(Loop):
     '''asyncio compatible Loop'''
     def __init__(self, async_loop=None, handlers=None, listeners=None, clock=None, limit_fps=None):
@@ -188,7 +194,10 @@ class AsyncLoop(Loop):
         self._running = True
         self._stopping = False
 
-        self.async_loop.run_until_complete(self._run())
+        try:
+            self.async_loop.run_until_complete(self._run())
+        except KeyboardInterrupt:
+            pass
 
         self._stopping = False
         self._running = False

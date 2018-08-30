@@ -107,7 +107,7 @@ class WindowEvent(event.Event):
                 action = 'minimized'
             elif state == 6 and gain == 1:
                 # treat this as focus gained as well, since they go hand-in-hand
-                aliases = ('window:restored','window:focus.gained')
+                aliases = ('window:restored','window:gained_focus')
                 action = 'restored'
         # TODO: handle resizes here too?
 

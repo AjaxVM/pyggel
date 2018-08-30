@@ -18,4 +18,5 @@ class Listener:
         self._loop = loop
 
     def check(self):
+        print('boo')
         pass

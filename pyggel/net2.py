@@ -11,7 +11,7 @@ try:
 except:
     HAVE_MSG_PACK = False
 
-from .event import event, listener
+from .event import event, listener, loop
 
 
 class TextFormat:
@@ -90,10 +90,11 @@ class MsgpackFormat(TextFormat):
 
 
 class Connection(asyncio.Protocol):
-    def __init__(self, listener, formatter=None):
+    def __init__(self, listener, formatter=None, label=None):
         self.formatter = formatter or TextFormat()
         self._listener = listener
         self._closed = False
+        self.label = label
 
         self.id = id(self)
         self.transport = None
@@ -101,22 +102,22 @@ class Connection(asyncio.Protocol):
     # event callbacks
     def connection_made(self, transport):
         self.transport = transport
-        self.listener.new_connection(self)
+        self._listener.new_connection(self)
 
     def connection_lost(self, transport):
         # don't submit lost event if it was closed already
         if not self._closed:
             self._closed = True
-            self.listener.lost_connection(self)
+            self._listener.lost_connection(self)
 
     def data_received(self, data):
         for message in self.formatter.unformat(data):
-            self.listener.message(self, message)
+            self._listener.message(self, message)
 
     # actions
     def close(self):
         if self._closed:
-            throw Exception('Connection alrady closed')
+            raise Exception('Connection already closed')
         self._closed = True
         self.transport.write_eof()
 
@@ -125,13 +126,13 @@ class Connection(asyncio.Protocol):
 
 
 class ConnectionFactory:
-    def __init__(self, listener, *args, **kwargs):
+    def __init__(self, listener, formatter=None, label=None):
         self.listener = listener
-        self.args = args
-        self.kwargs = kwargs
+        self.formatter = formatter
+        self.label = label
 
     def __call__(self):
-        return Connection(self.listener, *self.args, **self.kwargs)
+        return Connection(self.listener, self.formatter, self.label)
 
 
 class ConnectionListener(listener.Listener):
@@ -150,12 +151,70 @@ class ConnectionListener(listener.Listener):
                 self._events = deque()
             self._events.append(evt)
 
-    def check(self):
+    def get_events(self):
         if self._events:
             for i in range(len(self._events)):
                 yield self._events.popleft()
 
+    def check(self):
+        # TODO: this could recursively loop if not added to a loop and this is called... lol
+        for evt in self.get_events():
+            self._dispatch(evt)
+
+    def new_connection(self, connection):
+        self._dispatch(ConnectionEvent(connection, 'new'))
+
+    def lost_connection(self, connection):
+        self._dispatch(ConnectionEvent(connection, 'lost'))
+
+    def message(self, connection, message):
+        self._dispatch(ConnectionEvent(connection, 'message', message))
+
+
+class ConnectionEvent(event.Event):
+    def __init__(self, connection, name, message=None):
+        super().__init__('connection', ('connection.'+name,))
+        self.connection = connection
+        self.message = message
+
 
 # TODO: what system do we want to use for this?
-# do we want a connect/serve function that returns a listener
-# or what?
+# currently have two functions but there is a lot shared
+
+# TODO: more advanced support for connection/socket params
+def start_server(hostname='localhost', port=7779, async_loop=None, listener=None, formatter=None, label='server'):
+    factory = ConnectionFactory(listener or ConnectionListener(), formatter, label)
+
+    if not async_loop:
+        # user isn't managing this, so just grab the current loop
+        async_loop = asyncio.get_event_loop()
+    elif hasattr(async_loop, 'async_loop'):
+        # handle if we are getting one of our loops
+        async_loop = async_loop.async_loop
+    elif not isinstance(async_loop, asyncio.AbstractEventLoop):
+        raise Exception('async_loop myst be an asyncio loop, or a pyggel AsyncLoop')
+
+    # setup the create server part - do we actually want to do this or spawn a background process so game keeps playing?
+    async_loop.run_until_complete(async_loop.create_server(factory, hostname, port))
+
+    return factory.listener
+
+
+# TODO: most of this logic is identical to start_server... at least until we have the advanced socket options
+def connect(hostname='localhost', port=7779, async_loop=None, listener=None, formatter=None, label='client'):
+    factory = ConnectionFactory(listener or ConnectionListener(), formatter, label)
+
+    # TODO: if we consolidate pyggel AsyncLoop to an asyncio one this check is cleaner
+    if not async_loop:
+        # user isn't managing this, so just grab the current loop
+        async_loop = asyncio.get_event_loop()
+    elif hasattr(async_loop, 'async_loop'):
+        # handle if we are getting one of our loops
+        async_loop = async_loop.async_loop
+    elif not isinstance(async_loop, asyncio.AbstractEventLoop):
+        raise Exception('async_loop myst be an asyncio loop, or a pyggel AsyncLoop')
+
+    # connect to server - again, should this be a background thing?
+    async_loop.run_until_complete(async_loop.create_connection(factory, hostname, port))
+
+    return factory.listener
