@@ -11,24 +11,27 @@ class MyHandler(handler.Handler):
 
     # TODO: maybe make events different depending on the side, ie
     #       server:
-    #           connection.listening, connection.new_client, connection.message, connection.lost_client, connection.stopped_listening
+    #           connection.listening, connection.new, connection.message, connection.lost_client
     #       client:
     #           connection.connected, connection.disconnected, connection.message
 
+    # actually this is weird, we get connection.new on the server, but the connection.is_server is True, which is wrong
+    # it's more that the handler is the server but it is the connection to the client
+
     @handler.register('connection')
     def test(self, evt):
-        print('other', evt.aliases[0], evt.connection.label)
+        print('other', evt.aliases[0], 'server' if evt.connection.is_server else 'client')
 
     @handler.register('connection.new')
     def handle(self, evt):
-        print('new', evt.connection.label)
+        print('new', 'server' if evt.connection.is_server else 'client')
         evt.connection.send('hi')
 
     @handler.register('connection.message')
     def message(self, evt):
-        print('message', evt.connection.label, evt.message)
-        # evt.connection.close()
-        evt.connection.transport.write_eof()
+        print('message', 'server' if evt.connection.is_server else 'client', evt.message)
+        evt.connection.close()
+        # evt.connection.transport.write_eof()
 
 
 def main():

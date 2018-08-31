@@ -90,11 +90,11 @@ class MsgpackFormat(TextFormat):
 
 
 class Connection(asyncio.Protocol):
-    def __init__(self, listener, formatter=None, label=None):
+    def __init__(self, listener, formatter=None, is_server=False):
         self.formatter = formatter or TextFormat()
         self._listener = listener
         self._closed = False
-        self.label = label
+        self.is_server = is_server
 
         self.id = id(self)
         self.transport = None
@@ -126,13 +126,13 @@ class Connection(asyncio.Protocol):
 
 
 class ConnectionFactory:
-    def __init__(self, listener, formatter=None, label=None):
+    def __init__(self, listener, formatter=None, is_server=False):
         self.listener = listener
         self.formatter = formatter
-        self.label = label
+        self.is_server = is_server
 
     def __call__(self):
-        return Connection(self.listener, self.formatter, self.label)
+        return Connection(self.listener, self.formatter, self.is_server)
 
 
 class ConnectionListener(listener.Listener):
@@ -162,10 +162,16 @@ class ConnectionListener(listener.Listener):
             self._dispatch(evt)
 
     def new_connection(self, connection):
-        self._dispatch(ConnectionEvent(connection, 'new'))
+        if connection.is_server:
+            self._dispatch(ConnectionEvent(connection, 'new'))
+        else:
+            self._dispatch(ConnectionEvent(connection, 'connected'))
 
     def lost_connection(self, connection):
-        self._dispatch(ConnectionEvent(connection, 'lost'))
+        if connection.is_server:
+            self._dispatch(ConnectionEvent(connection, 'lost'))
+        else:
+            self._dispatch(ConnectionEvent(connection, 'disconnected'))
 
     def message(self, connection, message):
         self._dispatch(ConnectionEvent(connection, 'message', message))
@@ -182,8 +188,8 @@ class ConnectionEvent(event.Event):
 # currently have two functions but there is a lot shared
 
 # TODO: more advanced support for connection/socket params
-def start_server(hostname='localhost', port=7779, async_loop=None, listener=None, formatter=None, label='server'):
-    factory = ConnectionFactory(listener or ConnectionListener(), formatter, label)
+def start_server(hostname='localhost', port=7779, async_loop=None, listener=None, formatter=None):
+    factory = ConnectionFactory(listener or ConnectionListener(), formatter, is_server=True)
 
     if not async_loop:
         # user isn't managing this, so just grab the current loop
@@ -195,14 +201,15 @@ def start_server(hostname='localhost', port=7779, async_loop=None, listener=None
         raise Exception('async_loop myst be an asyncio loop, or a pyggel AsyncLoop')
 
     # setup the create server part - do we actually want to do this or spawn a background process so game keeps playing?
-    async_loop.run_until_complete(async_loop.create_server(factory, hostname, port))
+    # async_loop.run_until_complete(async_loop.create_server(factory, hostname, port))
+    async_loop.create_task(async_loop.create_server(factory, hostname, port))
 
     return factory.listener
 
 
 # TODO: most of this logic is identical to start_server... at least until we have the advanced socket options
-def connect(hostname='localhost', port=7779, async_loop=None, listener=None, formatter=None, label='client'):
-    factory = ConnectionFactory(listener or ConnectionListener(), formatter, label)
+def connect(hostname='localhost', port=7779, async_loop=None, listener=None, formatter=None):
+    factory = ConnectionFactory(listener or ConnectionListener(), formatter)
 
     # TODO: if we consolidate pyggel AsyncLoop to an asyncio one this check is cleaner
     if not async_loop:
@@ -215,6 +222,7 @@ def connect(hostname='localhost', port=7779, async_loop=None, listener=None, for
         raise Exception('async_loop myst be an asyncio loop, or a pyggel AsyncLoop')
 
     # connect to server - again, should this be a background thing?
-    async_loop.run_until_complete(async_loop.create_connection(factory, hostname, port))
+    # async_loop.run_until_complete(async_loop.create_connection(factory, hostname, port))
+    async_loop.create_task(async_loop.create_connection(factory, hostname, port))
 
     return factory.listener
