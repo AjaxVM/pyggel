@@ -94,10 +94,19 @@ class Connection(asyncio.Protocol):
         self.formatter = formatter or TextFormat()
         self._listener = listener
         self._closed = False
-        self.is_server = is_server
+        self._is_server = is_server
 
         self.id = id(self)
         self.transport = None
+
+    @property
+    def listener(self):
+        return self._listener
+    
+    @property
+    def is_server(self):
+        return self._is_server
+    
 
     # event callbacks
     def connection_made(self, transport):
