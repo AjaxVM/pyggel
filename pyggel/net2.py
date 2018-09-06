@@ -90,58 +90,91 @@ class MsgpackFormat(TextFormat):
 
 
 class Connection(asyncio.Protocol):
-    def __init__(self, listener, formatter=None, is_server=False):
-        self.formatter = formatter or TextFormat()
-        self._listener = listener
+    def __init__(self, manager, alive=True):
         self._closed = False
-        self._is_server = is_server
+
+        self._alive = alive
+
+        self._manager = manager
 
         self.id = id(self)
         self.transport = None
 
     @property
-    def listener(self):
-        return self._listener
-    
+    def alive(self):
+        return self._alive
+
     @property
-    def is_server(self):
-        return self._is_server
-    
+    def ready(self):
+        return self.transport and self._alive
+
+    @property
+    def manager(self):
+        return self._manager
 
     # event callbacks
     def connection_made(self, transport):
         self.transport = transport
-        self._listener.new_connection(self)
+        self._manager.listener.new_connection(self)
 
     def connection_lost(self, transport):
         # don't submit lost event if it was closed already
+        self._alive = False
+
         if not self._closed:
             self._closed = True
-            self._listener.lost_connection(self)
+            self._manager.listener.lost_connection(self)
 
     def data_received(self, data):
-        for message in self.formatter.unformat(data):
-            self._listener.message(self, message)
+        for message in self._manager.formatter.unformat(data):
+            self._manager.listener.message(self, message)
 
     # actions
     def close(self):
+        if not self._alive:
+            raise Exception('Connection is not alive, cannot close')
         if self._closed:
             raise Exception('Connection already closed')
         self._closed = True
-        self.transport.write_eof()
+        if self.ready:
+            self.transport.write_eof()
 
     def send(self, message):
-        self.transport.write(self.formatter.format(message))
+        if not self._alive:
+            raise Exception('Connection not alive, cannot send')
+        if not self.ready:
+            raise Exception('Connection not ready, cannot send')
+        self.transport.write(self._manager.formatter.format(message))
 
 
-class ConnectionFactory:
+# class ConnectionFactory:
+class ConnectionManager:
     def __init__(self, listener, formatter=None, is_server=False):
         self.listener = listener
         self.formatter = formatter
         self.is_server = is_server
 
-    def __call__(self):
-        return Connection(self.listener, self.formatter, self.is_server)
+        # _raw_manager should be the Asyncio Server or Client transport
+        self._raw_manager = None
+
+        self._alive = False
+
+    @property
+    def alive(self):
+        return self._alive
+
+    def set_raw_manager(self, manager):
+        self._raw_manager = manager
+        self._alive = True
+
+    def kill(self):
+        if not self._alive:
+            raise Exception('Manager not active, nothing to kill')
+        self._raw_manager.close()
+        self._alive = False
+
+    def connection(self, alive=True):
+        return Connection(self, alive)
 
 
 class ConnectionListener(listener.Listener):
@@ -150,6 +183,17 @@ class ConnectionListener(listener.Listener):
 
         # if we get a network event, but are not assigned a loop, we will store them in _events
         # this way the listener can be used without our loop as desired
+        self._events = None
+
+    def set_manager(self, manager):
+        self.manager = manager
+
+    def set_loop(self, loop):
+        super().set_loop(loop)
+
+        # push any stored events into the loop queue
+        for event in self.get_events():
+            self._loop.dispatch(event)
         self._events = None
 
     def _dispatch(self, evt):
@@ -166,18 +210,18 @@ class ConnectionListener(listener.Listener):
                 yield self._events.popleft()
 
     def check(self):
-        # TODO: this could recursively loop if not added to a loop and this is called... lol
-        for evt in self.get_events():
-            self._dispatch(evt)
+        # we don't need to do anything here, as we can asynchronously dispatch events
+        # and we dispatch any "early" events as soon as we have the loop
+        pass
 
     def new_connection(self, connection):
-        if connection.is_server:
+        if connection.manager.is_server:
             self._dispatch(ConnectionEvent(connection, 'new'))
         else:
             self._dispatch(ConnectionEvent(connection, 'connected'))
 
     def lost_connection(self, connection):
-        if connection.is_server:
+        if connection.manager.is_server:
             self._dispatch(ConnectionEvent(connection, 'lost'))
         else:
             self._dispatch(ConnectionEvent(connection, 'disconnected'))
@@ -185,20 +229,72 @@ class ConnectionListener(listener.Listener):
     def message(self, connection, message):
         self._dispatch(ConnectionEvent(connection, 'message', message))
 
+    def server_init_error(self, connection, err):
+        self._dispatch(ConnectionEvent(connection, 'error:server_init', error=err))
+
+    def client_connection_error(self, connection, err):
+        self._dispatch(ConnectionEvent(connection, 'error:client_connection', error=err))
+
 
 class ConnectionEvent(event.Event):
-    def __init__(self, connection, name, message=None):
-        super().__init__('connection', ('connection.'+name,))
+    def __init__(self, connection, name, message=None, error=None):
+        super().__init__('connection', name)
         self.connection = connection
         self.message = message
+        self.error = error
 
 
-# TODO: what system do we want to use for this?
-# currently have two functions but there is a lot shared
+async def _start_server(loop, manager, hostname, port):
+    try:
+        manager.set_raw_manager(await loop.create_server(manager.connection, hostname, port))
+    except Exception as err:
+        manager.listener.server_init_error(manager.connection(False), err)
 
-# TODO: more advanced support for connection/socket params
-def start_server(hostname='localhost', port=7779, async_loop=None, listener=None, formatter=None):
-    factory = ConnectionFactory(listener or ConnectionListener(), formatter, is_server=True)
+
+async def _connect(loop, manager, hostname, port):
+    try:
+        client = await loop.create_connection(manager.connection, hostname, port)
+        manager.set_raw_manager(client[0]) # send the transport in
+    except Exception as err:
+        manager.listener.client_connection_error(manager.connection(False), err)
+
+
+def start_server(hostname='localhost', port=7779, async_loop=None, manager=None, listener=None, formatter=None):
+    if manager and (listener or formatter):
+        raise Exception('if manager is defined, listener and formatter may not be used')
+
+    if not manager:
+        manager = ConnectionManager(
+            listener or ConnectionListener(),
+            formatter or TextFormat(),
+            is_server = True
+        )
+
+    if not async_loop:
+        # user isn't managing this, so just grab the current loop
+        async_loop = asyncio.get_event_loop()
+    elif isinstance(async_loop, loop.AsyncLoop):
+        # handle if we are getting one of our loops
+        async_loop = async_loop.async_loop
+    elif not isinstance(async_loop, asyncio.AbstractEventLoop):
+        raise Exception('async_loop myst be an asyncio loop, or a pyggel AsyncLoop')
+
+    # schedule setup of server
+    async_loop.create_task(_start_server(async_loop, manager, hostname, port))
+
+    return manager
+
+
+def connect(hostname='localhost', port=7779, async_loop=None, manager=None, listener=None, formatter=None):
+    if manager and (listener or formatter):
+        raise Exception('if manager is defined, listener and formatter may not be used')
+
+    if not manager:
+        manager = ConnectionManager(
+            listener or ConnectionListener(),
+            formatter or TextFormat(),
+            is_server = False
+        )
 
     if not async_loop:
         # user isn't managing this, so just grab the current loop
@@ -209,29 +305,7 @@ def start_server(hostname='localhost', port=7779, async_loop=None, listener=None
     elif not isinstance(async_loop, asyncio.AbstractEventLoop):
         raise Exception('async_loop myst be an asyncio loop, or a pyggel AsyncLoop')
 
-    # setup the create server part - do we actually want to do this or spawn a background process so game keeps playing?
-    # async_loop.run_until_complete(async_loop.create_server(factory, hostname, port))
-    async_loop.create_task(async_loop.create_server(factory, hostname, port))
+    # schedule connection to server
+    async_loop.create_task(_connect(async_loop, manager, hostname, port))
 
-    return factory.listener
-
-
-# TODO: most of this logic is identical to start_server... at least until we have the advanced socket options
-def connect(hostname='localhost', port=7779, async_loop=None, listener=None, formatter=None):
-    factory = ConnectionFactory(listener or ConnectionListener(), formatter)
-
-    # TODO: if we consolidate pyggel AsyncLoop to an asyncio one this check is cleaner
-    if not async_loop:
-        # user isn't managing this, so just grab the current loop
-        async_loop = asyncio.get_event_loop()
-    elif hasattr(async_loop, 'async_loop'):
-        # handle if we are getting one of our loops
-        async_loop = async_loop.async_loop
-    elif not isinstance(async_loop, asyncio.AbstractEventLoop):
-        raise Exception('async_loop myst be an asyncio loop, or a pyggel AsyncLoop')
-
-    # connect to server - again, should this be a background thing?
-    # async_loop.run_until_complete(async_loop.create_connection(factory, hostname, port))
-    async_loop.create_task(async_loop.create_connection(factory, hostname, port))
-
-    return factory.listener
+    return manager

@@ -46,13 +46,17 @@ class InputListener(listener.Listener):
         if mouse:
             accept.extend(EVENT_MAPPINGS['mouse'])
         if mouse_motion:
-            accept.extend(EVENT_MAPPINGS['mousemotion'])
+            accept.extend(EVENT_MAPPINGS['mouse_motion'])
 
+        # clear out what can be grabbed, then set with our limited list
+        pygame.event.set_allowed(None)
         pygame.event.set_allowed(accept)
 
     def get_events(self):
         events = pygame.event.get()
-        cur_mods = KeyboardMods()
+        cur_mods = KeyboardModStatus()
+        cur_mouse = MouseStatus()
+        # TODO: attach current mouse position to these things
 
         for evt in events:
             if evt.type == QUIT or evt.type == ACTIVEEVENT:
@@ -60,54 +64,72 @@ class InputListener(listener.Listener):
                 # since the rules are pretty branching
                 yield WindowEvent(evt)
             if evt.type == KEYDOWN:
-                yield KeyboardEvent('input.key.down', evt, cur_mods)
+                yield KeyboardEvent('input.key.down', evt, cur_mods, cur_mouse)
             if evt.type == KEYUP:
-                yield KeyboardEvent('input.key.up', evt, cur_mods)
+                yield KeyboardEvent('input.key.up', evt, cur_mods, cur_mouse)
             if evt.type == MOUSEBUTTONDOWN:
                 if evt.button in MouseScrollEvent.BUTTON_MAP:
-                    yield MouseScrollEvent('input.mouse.scroll', evt, cur_mods)
+                    yield MouseScrollEvent(evt, cur_mods, cur_mouse)
                 else:
                     yield MouseButtonEvent('input.mouse.down', evt, cur_mods)
             if evt.type == MOUSEBUTTONUP:
                 # scrolls generate up and down events, only need one
                 if evt.button not in MouseScrollEvent.BUTTON_MAP:
                     yield MouseButtonEvent('input.mouse.up', evt, cur_mods)
+            if evt.type == MOUSEMOTION:
+                yield MouseMotionEvent(evt, cur_mods)
 
     def check(self):
         for evt in self.get_events():
             self._loop.dispatch(evt)
 
 
-class WindowEvent(event.Event):
+class InputBaseEvent(event.Event):
+    def __init__(self, name, aliases=None, mods=None, mouse=None):
+        super().__init__('input', name, aliases)
+
+        if mods:
+            self.mods = mods
+        if mouse:
+            self.mouse = mouse
+
+    # override these methods, we'll manage them
+    def qualify_name(self, name):
+        return name
+
+    def qualify_aliases(self, aliases):
+        return aliases
+
+class WindowEvent(InputBaseEvent):
     def __init__(self, pygame_event):
-        name = 'window'
+        name = 'input.window'
         if pygame_event.type == QUIT:
-            aliases = ('window:close',)
+            aliases = ('input.window:close',)
             action = 'close'
         elif pygame_event.type == ACTIVEEVENT:
             state = pygame_event.state
             gain = pygame_event.gain
 
             if state == 1 and gain == 0:
-                aliases = ('window:mouse_out',)
+                aliases = ('input.window:mouse_out',)
                 action = 'mouse_out'
             elif state == 1 and gain == 1:
-                aliases = ('window:mouse_in',)
+                aliases = ('input.window:mouse_in',)
                 action = 'mouse_in'
             elif state == 2 and gain == 0:
-                aliases = ('window:lost_focus',)
+                aliases = ('input.window:lost_focus',)
                 action = 'lost_focus'
             elif state == 2 and gain == 1:
                 # NOTE: I could never get this one to fire - since window.active seemed to handle it
-                aliases = ('window:gained_focus',)
+                aliases = ('input.window:gained_focus',)
                 action = 'gained_focus'
             elif state == 6 and gain == 0:
                 # treat this as focus lost because effectively they are the same
-                aliases = ('window:minimized','window:lost_focus')
+                aliases = ('input.window:minimized','input.window:lost_focus')
                 action = 'minimized'
             elif state == 6 and gain == 1:
                 # treat this as focus gained as well, since they go hand-in-hand
-                aliases = ('window:restored','window:gained_focus')
+                aliases = ('input.window:restored','input.window:gained_focus')
                 action = 'restored'
         # TODO: handle resizes here too?
 
@@ -116,7 +138,7 @@ class WindowEvent(event.Event):
         self.action = action
 
 
-class KeyboardEvent(event.Event):
+class KeyboardEvent(InputBaseEvent):
     MAPPED_EVENTS = {}
     MAPPED_CHARS = {} # keyup events don't have unicode from pygame, so map here from the keydowns
 
@@ -131,7 +153,7 @@ class KeyboardEvent(event.Event):
         ' ', # space
     ]
 
-    def __init__(self, name, pygame_event, mods):
+    def __init__(self, name, pygame_event, mods, mouse):
         if pygame_event.type == KEYDOWN:
             char = pygame_event.unicode
             if not pygame_event.type in self.MAPPED_CHARS:
@@ -145,9 +167,7 @@ class KeyboardEvent(event.Event):
 
         key = self.get_mapped_name(pygame_event)
 
-        # init, with alias
-        # todo: maybe support input mapping (ie: key.a -> move_left) with alias?
-        super().__init__(name, (name+':'+key,))
+        super().__init__(name, (name+':'+key,), mods, mouse)
 
         self.raw = pygame_event
         self.key = key
@@ -165,7 +185,7 @@ class KeyboardEvent(event.Event):
         return KeyboardEvent.MAPPED_EVENTS[pygame_event.key]
 
 
-class KeyboardMods:
+class KeyboardModStatus:
     def __init__(self):
         self._mods = pygame.key.get_mods()
 
@@ -230,7 +250,16 @@ class KeyboardMods:
         return bool(self._mods & KMOD_MODE)
 
 
-class MouseButtonEvent(event.Event):
+class MouseStatus:
+    def __init__(self):
+        self.x, self.y = pygame.mouse.get_pos()
+
+    @property
+    def pos(self):
+        return self.x, self.y
+
+
+class MouseButtonEvent(InputBaseEvent):
     BUTTON_MAP = {
         1: 'left',
         2: 'middle',
@@ -238,34 +267,62 @@ class MouseButtonEvent(event.Event):
     }
 
     def __init__(self, name, pygame_event, mods):
-        if pygame_event.button in self.BUTTON_MAP:
-            button = self.BUTTON_MAP[pygame_event.button]
-        else:
-            button = 'button_'+str(pygame_event.button)
-        super().__init__(name, (name+':'+button,))
+        button = self.button_name(pygame_event.button)
+        super().__init__(name, (name+':'+button,), mods)
 
         self.raw = pygame_event
         self.button = button
-        self.mods = mods
         self.x, self.y = pygame_event.pos
 
+    @property
+    def pos(self):
+        return self.x, self.y
 
-class MouseScrollEvent(event.Event):
+    @staticmethod
+    def button_name(button):
+        if button in MouseButtonEvent.BUTTON_MAP:
+            return MouseButtonEvent.BUTTON_MAP[button]
+        else:
+            return 'button_'+str(button) 
+
+
+class MouseScrollEvent(InputBaseEvent):
     BUTTON_MAP = {
         4: 'up',
         5: 'down'
     }
 
-    def __init__(self, name, pygame_event, mods):
+    def __init__(self, pygame_event, mods):
         if pygame_event.button not in self.BUTTON_MAP:
             raise TypeError('Invalid input even')
 
         direction = self.BUTTON_MAP[pygame_event.button]
-        super().__init__(name, (name+':'+direction,))
+        name = 'input.mouse.scroll'
+        super().__init__(name, (name+':'+direction,), mods)
 
         self.raw = pygame_event
         self.direction = direction
         self.value = -1 if direction == 'up' else 1
-        self.mods = mods
         self.x, self.y = pygame_event.pos
 
+    @property
+    def pos(self):
+        return self.x, self.y
+
+
+class MouseMotionEvent(InputBaseEvent):
+    def __init__(self, pygame_event, mods):
+        super().__init__('input.mouse.motion', None, mods)
+
+        self.raw = pygame_event
+        self.x, self.y = pygame_event.pos
+        self.rel_x, self.rel_y = pygame_event.rel
+        self.buttons = [MouseButtonEvent.button_name(button) for button in pygame_event.buttons]
+
+    @property
+    def pos(self):
+        return self.x, self.y
+
+    @property
+    def rel(self):
+        return self.rel_x, self.rel_y

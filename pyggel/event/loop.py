@@ -47,18 +47,20 @@ class Loop:
     def _handle_event(self, event):
         # TODO: these status updates might be unnecessy overhead - is there a real use case?
         self._handling_event = True
-        event._scheduled = False
-        event._handling = True
-        for handler in self._handlers:
-            # events can be cancelled once processing starts (ie for ui to stop propagation)
-            # TODO: handlers should have "priority" - higher is sorter first (get first shot at events)
-            # so we can support ui taking events first and letting only uncaught ones continue to game
-            if event._cancelled:
-                break
-            handler.handle_event(event)
-        event._handling = False
-        event._handled = True
-        self._handling_event = False
+        try:
+            event._scheduled = False
+            event._handling = True
+            for handler in self._handlers:
+                # events can be cancelled once processing starts (ie for ui to stop propagation)
+                # TODO: handlers should have "priority" - higher is sorter first (get first shot at events)
+                # so we can support ui taking events first and letting only uncaught ones continue to game
+                if event._cancelled:
+                    break
+                handler.handle_event(event)
+            event._handling = False
+            event._handled = True
+        finally:
+            self._handling_event = False
 
     def _run_once(self, delta):
         # send tick command
@@ -116,6 +118,9 @@ class Loop:
             self.add_listener(listener)
 
     def event_registered(self, event):
+        # check if any handlers are watching this event, otherwise, discard it
+        if event.base_name in self._event_index:
+            return True
         if event.name in self._event_index:
             return True
         if event.has_alias:
@@ -187,6 +192,12 @@ class AsyncLoop(Loop):
             else:
                 await self._clock.sleep_async(0)
 
+        # need to manage these here, since start can be async
+        self._stopping = False
+        self._running = False
+
+    # start has two uses - first is the same as the base loop, if the asyncio loop is already running, it will not block
+    # however, if the asyncio loop is not already running, this will start the asyncio loop and block until this loop is stopped
     def start(self):
         if self._running:
             raise Exception('Already running')
@@ -194,10 +205,10 @@ class AsyncLoop(Loop):
         self._running = True
         self._stopping = False
 
-        try:
-            self.async_loop.run_until_complete(self._run())
-        except KeyboardInterrupt:
-            pass
-
-        self._stopping = False
-        self._running = False
+        if self.async_loop.is_running():
+            self.async_loop.create_task(self._run())
+        else:
+            try:
+                self.async_loop.run_until_complete(self._run())
+            except KeyboardInterrupt:
+                pass

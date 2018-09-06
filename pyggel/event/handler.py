@@ -53,6 +53,10 @@ class Handler:
         # event has no alias, or we are not handling the alias, check for event_name handler
         if event.name in self._callbacks:
             self._callbacks[event.name](event)
+            return
+        # we are not handling event name, so fall back to base name
+        if event.base_name in self._callbacks:
+            self._callbacks[event.base_name](event)
 
     def register(self, event_name, callback):
         if event_name in self._callbacks:

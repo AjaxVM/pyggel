@@ -53,18 +53,23 @@ class MyHandler(handler.Handler):
     #         'mod_alt': event.mods.alt
     #     })
 
-    @handler.register('window:close')
+    @handler.register('input.window:close')
     @handler.register('input.key.down:escape')
     def handle_quit(self, event):
         self.loop.stop()
 
-    @handler.register('window')
+    @handler.register('input.window')
     def handle_window(self, event):
-        print(event.action)
+        print('window', event.action)
 
     @handler.register('input.key.down')
     def test(self, event):
-        print('test', event.key)
+        print('test', event.key, event.mouse.pos)
+
+    @handler.register('input.mouse.motion')
+    def handle_any_input(self, event):
+        # print('hola', event.x, event.y, event.rel_x, event.rel_y)
+        pass
 
 
 def main():
@@ -80,7 +85,7 @@ def main():
     hand = MyHandler(screen)
 
     my_loop.add_handler(hand)
-    my_loop.add_listener(InputListener())
+    my_loop.add_listener(InputListener(mouse_motion=True))
 
     my_loop.start()
 
@@ -88,6 +93,9 @@ def main():
 
 main()
 
+
+# TODO: maybe something like following for "hard-aliases"
+# this would only work for key/mouse up/down though
 
 # from pyggel.event import handler, event
 
