@@ -1,124 +1,60 @@
 
+import asyncio
 
-import select, socket
-from . import packet
 
-# todo: use generators/yield where possible for speed
+class Connection(asyncio.Protocol):
+    def __init__(self, manager, alive=True):
+        self._closed = False
 
-class Connection:
-    def __init__(self,
-                 address,
-                 socket = None,
-                 read_buffer_size=1024,
-                 data_delimiter='{:::}'):
+        self._alive = alive
 
-        self._alive = bool(socket)
-        self.is_server = False
+        self._manager = manager
 
-        self.socket = socket or self._generate_socket()
-        self.address = address
-
-        self.read_buffer_size = read_buffer_size
-        self.data_delimiter = data_delimiter
-
-        self._data = ''
-
-    def _generate_socket(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-
-        return sock
-
-    def _process_data(self):
-        messages = self._data.split(self.data_delimiter)
-        if not self._data.endswith(self.data_delimiter):
-            # we have a partial message for the last one, keep that
-            self._data = messages[-1]
-            messages = messages[:-1]
-
-        return [packet.Packet(i) for i in messages]
+        self.id = id(self)
+        self.transport = None
 
     @property
     def alive(self):
         return self._alive
 
-    def kill(self):
+    @property
+    def ready(self):
+        return self.transport and self._alive
+
+    @property
+    def manager(self):
+        return self._manager
+
+    # event callbacks
+    def connection_made(self, transport):
+        self.transport = transport
+        self._manager.listener.new_connection(self)
+
+    def connection_lost(self, transport):
+        # don't submit lost event if it was closed already
+        self._alive = False
+
+        if not self._closed:
+            self._closed = True
+            self._manager.listener.lost_connection(self)
+
+    def data_received(self, data):
+        for message in self._manager.formatter.unformat(data):
+            self._manager.listener.message(self, message)
+
+    # actions
+    def close(self):
         if not self._alive:
-            self.socket.close()
-            self._alive = False
-            self.is_server = False
-            return
-        raise Exception('Not connected')
+            raise Exception('Connection is not alive, cannot close')
+        if self._closed:
+            raise Exception('Connection already closed')
+        self._closed = True
+        if self.ready:
+            self.transport.write_eof()
 
-    def connect(self):
-        if self.is_server:
-            raise Exception('Cannot connect when serving')
-        elif self._alive: 
-            raise Exception('Already connected')
-
-        self.socket.connect(self.address)
-        self._alive = True
-
-    def listen(self, client_backlog=8):
-        if self.is_server:
-            raise Exception('Already serving')
-        elif self._alive:
-            raise Exception('Cannot serve when connected as client')
-            
-        self.socket.bind(self.address)
-        self.socket.listen(client_backlog)
-        self._alive = True
-        self.is_server = True
-
-    def ready_for_read(self, wait_timeout=0):
-        return bool(select.select([self.socket], [], [], wait_timeout))
-
-    def accept_connection(self):
-        # wait for, and return a new Connection, if we are serving
-        # connection is configured with the same parameters we are
+    def send(self, message):
         if not self._alive:
-            raise Exception('Not connected')
-        elif not self.is_server:
-            raise Exception('Not running as server')
-
-        if self._alive and self.is_server:
-            sock, address = self.socket.accept()
-            return Connection(address,
-                              socket=sock,
-                              read_buffer_size=self.read_buffer_size,
-                              data_delimiter=self.data_delimiter)
-
-    def read(self):
-        if not self._alive:
-            raise Exception('Not connected')
-        elif self.is_server:
-            raise Exception('Cannot read when serving')
-
-        try:
-            data = self.socket.recv(self.read_buffer_size)
-        except:
-            # sockets are supposed to return empty data if they are dead
-            # but sometimes we get an error - so handle the same
-            data = ''
-
-        if data:
-            self._data += data.decode()
-
-        packets = self._process_data()
-        if not data:
-            # bye bye
-            self.kill()
-            packet.append(packet.Packet(None, packet.Status.DISCONNECT))
-
-        return packets
-
-    def send(self, data):
-        if not self._alive:
-            raise Exception('Not connected')
-        if self.is_server:
-            raise Exception('Cannot write when serving')
-
-        try:
-            self.socket.send((data + self.data_delimiter).encode())
-        except:
-            self.kill()
+            raise Exception('Connection not alive, cannot send')
+        if not self.ready:
+            raise Exception('Connection not ready, cannot send')
+        self.transport.write(self._manager.formatter.format(message))

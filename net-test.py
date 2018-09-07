@@ -1,7 +1,8 @@
 
 import asyncio, random
 
-from pyggel import net2
+# from pyggel import net2
+from pyggel import net
 from pyggel.event import handler, loop
 
 class MyHandler(handler.Handler):
@@ -54,10 +55,12 @@ def server_and_client():
     print('this should be good')
     my_loop = loop.AsyncLoop()
 
-    server_manager = net2.start_server()
+    # server_manager = net2.start_server()
+    server_manager = net.create.server()
     my_loop.add_listener(server_manager.listener)
 
-    client_manager = net2.connect()
+    # client_manager = net2.connect()
+    client_manager = net.create.client()
     my_loop.add_listener(client_manager.listener)
 
     hand = MyHandler(server_manager, client_manager)
@@ -73,7 +76,8 @@ def client_no_server():
     print('this should have a client connection error')
     my_loop = loop.AsyncLoop()
 
-    client_manager = net2.connect()
+    # client_manager = net2.connect()
+    client_manager = net.create.client()
     my_loop.add_listener(client_manager.listener)
 
     hand = MyHandler(None, client_manager.listener)
@@ -89,10 +93,12 @@ def double_server():
     print('this should have a server bind error')
     my_loop = loop.AsyncLoop()
 
-    server_manager = net2.start_server()
+    # server_manager = net2.start_server()
+    server_manager = net.create.server()
     my_loop.add_listener(server_manager.listener)
 
-    server_manager2 = net2.start_server()
+    # server_manager2 = net2.start_server()
+    server_manager2 = net.create.server()
     my_loop.add_listener(server_manager2.listener)
 
     hand = MyHandler(None, None)

@@ -6,6 +6,7 @@ from . import (
     light,
     math3d,
     mesh,
+    net,
     render_engine,
     scene, shader,
     utils,
