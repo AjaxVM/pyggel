@@ -4,7 +4,11 @@ from setuptools import setup
 with open('requirements.txt') as reqs:
     dependencies = [req.strip() for req in reqs]
 
-print(dependencies)
+optional_requirements = {}
+with open('optional-requirements.txt') as opts:
+    for req in opts:
+        req = req.strip()
+        optional_requirements[req.split()[0]] = req
 
 setup(
     name = 'pyggel',
@@ -18,6 +22,7 @@ setup(
     keywords = 'game 3d opengl engine 2d',
     url = 'https://github.com/AjaxVM/pyggel',
     packages = ['pyggel'],
-    long_description = open('README.md').read(),
-    install_requires = dependencies
+    long_description = open('Readme.md').read(),
+    install_requires = dependencies,
+    extras_require = optional_requirements
 )
