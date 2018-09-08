@@ -1,7 +1,7 @@
 
 # PYGGEL (PYthon Graphical Game Engine and Libraries)
 
-OpenGL powered 2d/3d prototyping game engine.
+Lightweight, OpenGL powered, 2d/3d game engine - with the main goal of ease of learning/use and rapid prototyping.
 
 ## In Development
 
