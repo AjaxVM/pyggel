@@ -1,17 +1,14 @@
 
 import asyncio, random
 
-# from pyggel import net2
 from pyggel import net
 from pyggel.event import handler, loop
 
 class MyHandler(handler.Handler):
-
-    def __init__(self, server, client):
+    def __init__(self, server):
         super().__init__()
 
         self.server = server
-        self.client = client
 
     def label(self, evt):
         if evt.connection.manager == self.server:
@@ -55,20 +52,24 @@ def server_and_client():
     print('this should be good')
     my_loop = loop.AsyncLoop()
 
-    # server_manager = net2.start_server()
+
     server_manager = net.create.server()
+    managers = [server_manager]
     my_loop.add_listener(server_manager.listener)
 
-    # client_manager = net2.connect()
-    client_manager = net.create.client()
-    my_loop.add_listener(client_manager.listener)
+    hand = MyHandler(server_manager)
 
-    hand = MyHandler(server_manager, client_manager)
+    # we want to make sure the server finishes before we try to connect the client
+    def add_client(event):
+        client_manager = net.create.client()
+        my_loop.add_listener(client_manager.listener)
+        managers.append(client_manager)
+    hand.register('net.server_setup', add_client)
 
     my_loop.add_handler(hand)
 
     my_loop.start()
-    return my_loop, [server_manager, client_manager]
+    return my_loop, managers
 
 
 def client_no_server():
@@ -76,11 +77,10 @@ def client_no_server():
     print('this should have a client connection error')
     my_loop = loop.AsyncLoop()
 
-    # client_manager = net2.connect()
     client_manager = net.create.client()
     my_loop.add_listener(client_manager.listener)
 
-    hand = MyHandler(None, client_manager.listener)
+    hand = MyHandler(None)
 
     my_loop.add_handler(hand)
 
@@ -93,15 +93,13 @@ def double_server():
     print('this should have a server bind error')
     my_loop = loop.AsyncLoop()
 
-    # server_manager = net2.start_server()
     server_manager = net.create.server()
     my_loop.add_listener(server_manager.listener)
 
-    # server_manager2 = net2.start_server()
     server_manager2 = net.create.server()
     my_loop.add_listener(server_manager2.listener)
 
-    hand = MyHandler(None, None)
+    hand = MyHandler(None)
 
     my_loop.add_handler(hand)
 

@@ -9,7 +9,9 @@ from .manager import ConnectionManager
 
 async def _start_server(loop, manager, hostname, port):
     try:
-        manager.set_raw_manager(await loop.create_server(manager.connection, hostname, port))
+        server = await loop.create_server(manager.connection, hostname, port)
+        manager.set_raw_manager(server)
+        manager.listener.server_setup(manager)
     except Exception as err:
         manager.listener.server_init_error(manager.connection(False), err)
 
@@ -18,6 +20,7 @@ async def _connect(loop, manager, hostname, port):
     try:
         client = await loop.create_connection(manager.connection, hostname, port)
         manager.set_raw_manager(client[0]) # send the transport in
+        manager.listener.client_setup(manager)
     except Exception as err:
         manager.listener.client_connection_error(manager.connection(False), err)
 

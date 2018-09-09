@@ -1,7 +1,7 @@
 
 from collections import deque
 from ..event import listener
-from .event import ConnectionEvent
+from .event import ConnectionEvent, ManagerEvent
 
 
 class ConnectionListener(listener.Listener):
@@ -43,21 +43,27 @@ class ConnectionListener(listener.Listener):
 
     def new_connection(self, connection):
         if connection.manager.is_server:
-            self._dispatch(ConnectionEvent(connection, 'new'))
+            self._dispatch(ConnectionEvent('new', connection))
         else:
-            self._dispatch(ConnectionEvent(connection, 'connected'))
+            self._dispatch(ConnectionEvent('connected', connection))
 
     def lost_connection(self, connection):
         if connection.manager.is_server:
-            self._dispatch(ConnectionEvent(connection, 'lost'))
+            self._dispatch(ConnectionEvent('lost', connection))
         else:
-            self._dispatch(ConnectionEvent(connection, 'disconnected'))
+            self._dispatch(ConnectionEvent('disconnected', connection))
 
     def message(self, connection, message):
-        self._dispatch(ConnectionEvent(connection, 'message', message))
+        self._dispatch(ConnectionEvent('message', connection, message))
 
     def server_init_error(self, connection, err):
-        self._dispatch(ConnectionEvent(connection, 'error:server_init', error=err))
+        self._dispatch(ConnectionEvent('error:server_init', connection, error=err))
 
     def client_connection_error(self, connection, err):
-        self._dispatch(ConnectionEvent(connection, 'error:client_connection', error=err))
+        self._dispatch(ConnectionEvent('error:client_connection', connection, error=err))
+
+    def server_setup(self, manager):
+        self._dispatch(ManagerEvent('server_setup', manager))
+
+    def client_setup(self, manager):
+        self._dispatch(ManagerEvent('client_setup', manager))
